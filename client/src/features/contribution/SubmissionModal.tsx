@@ -177,7 +177,7 @@ export const SubmissionModal: React.FC<SubmissionModalProps> = ({
             <div className="absolute -bottom-6 -left-6 text-3xl animate-spin">🌕</div>
           </div>
           <p className="mt-6 text-yellow-300 font-display font-bold text-xl drop-shadow-lg animate-pulse">
-            🌕 Đang đưa mảnh về Bầy...
+            🌕 Đang góp mảnh về Trăng...
           </p>
         </div>
       )}
@@ -192,7 +192,7 @@ export const SubmissionModal: React.FC<SubmissionModalProps> = ({
                 <span>🌕 MẢNH #{piece.pieceNumber}</span>
               </div>
               <h2 className="font-display font-bold text-xl sm:text-2xl text-yellow-300">
-                GỬI MẢNH TRĂNG VỀ BẦY
+                GÓP MẢNH TRĂNG
               </h2>
               <p className="text-xs text-slate-300">
                 “Trăng không tự tròn. Trăng tròn vì có bạn.”
@@ -280,10 +280,10 @@ export const SubmissionModal: React.FC<SubmissionModalProps> = ({
                 {isSubmitting ? (
                   <>
                     <div className="w-4 h-4 border-2 border-night-950 border-t-transparent rounded-full animate-spin" />
-                    <span>Đang gửi về Bầy...</span>
+                    <span>Đang góp về trăng...</span>
                   </>
                 ) : (
-                  <span>🌕 ĐƯA MẢNH VỀ BẦY</span>
+                  <span>🌕 GÓP MẢNH VỀ TRĂNG</span>
                 )}
               </button>
               <button
@@ -306,7 +306,7 @@ export const SubmissionModal: React.FC<SubmissionModalProps> = ({
 
             <div className="space-y-1.5">
               <h2 className="font-display font-bold text-xl sm:text-2xl text-yellow-300">
-                Mảnh Trăng của bạn đã về Bầy 🐺✨
+                Mảnh Trăng của bạn đã được góp 🐺✨
               </h2>
               <p className="text-sm text-amber-200 font-semibold italic">
                 “Trăng không tự tròn. Trăng tròn vì có bạn.”

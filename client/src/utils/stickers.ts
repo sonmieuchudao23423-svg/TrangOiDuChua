@@ -393,7 +393,7 @@ export const BACKGROUND_PRESETS: BackgroundPreset[] = [
   },
   {
     id: 'bg-soi-ben-nuoc',
-    name: 'Bến Nước Tiên Sa',
+    name: 'Bến Nước',
     color: '#1e3a8a',
     imageUrl: '/backgrounds/bg_soi_ben_nuoc.jpg',
   },
@@ -405,7 +405,7 @@ export const BACKGROUND_PRESETS: BackgroundPreset[] = [
   },
   {
     id: 'bg-thanh-co',
-    name: 'Thành Cổ Tiên Sa',
+    name: 'Thành Cổ',
     color: '#0f172a',
     imageUrl: '/backgrounds/bg_thanh_co_tien_sa.jpg',
   },
