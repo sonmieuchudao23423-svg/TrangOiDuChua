@@ -70,19 +70,8 @@ export const Navbar: React.FC<NavbarProps> = ({ currentTab, onNavigate, moonData
             })}
           </div>
 
-          {/* Right side stats pill */}
+          {/* Right actions */}
           <div className="flex items-center gap-3">
-            {moonData && (
-              <div
-                onClick={() => handleItemClick('moon')}
-                className="cursor-pointer flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-yellow-400/10 border border-yellow-400/30 text-yellow-300 text-xs font-bold hover:bg-yellow-400/20 transition-colors shadow-sm"
-                title="Tiến độ vầng trăng"
-              >
-                <span className="inline-block w-2 h-2 rounded-full bg-yellow-400 animate-ping"></span>
-                <span>TRĂNG ĐÃ ĐỦ {moonData.progressPercent}%</span>
-              </div>
-            )}
-
             {/* Mobile menu toggle */}
             <button
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
