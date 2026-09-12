@@ -134,7 +134,7 @@ export const SubmissionModal: React.FC<SubmissionModalProps> = ({
       // Card Metadata
       ctx.fillStyle = '#facc15';
       ctx.font = 'bold 28px "Quicksand", sans-serif';
-      ctx.fillText(`Mảnh trăng #${piece.pieceNumber} / 400`, 400, 725);
+      ctx.fillText(`Mảnh trăng #${piece.pieceNumber}`, 400, 725);
 
       ctx.fillStyle = '#ffffff';
       ctx.font = 'bold 22px "Quicksand", sans-serif';
@@ -325,7 +325,7 @@ export const SubmissionModal: React.FC<SubmissionModalProps> = ({
 
               <div>
                 <p className="font-bold text-sm text-yellow-300">
-                  Mảnh #{piece.pieceNumber} / 400
+                  Mảnh trăng #{piece.pieceNumber}
                 </p>
                 <p className="text-xs text-white font-semibold">
                   {submissionResult.contribution.displayName}
@@ -341,7 +341,7 @@ export const SubmissionModal: React.FC<SubmissionModalProps> = ({
                 <Moon className="w-3.5 h-3.5" />
                 <span>Tiến độ vầng trăng hiện tại: </span>
                 <span className="font-bold text-yellow-300">
-                  {submissionResult.totalCompleted} / 400 ({submissionResult.moonProgress}%)
+                  {submissionResult.totalCompleted} mảnh ({submissionResult.moonProgress}%)
                 </span>
               </div>
             </div>

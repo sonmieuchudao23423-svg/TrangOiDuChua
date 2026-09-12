@@ -35,7 +35,7 @@ export const ContributionDetailModal: React.FC<ContributionDetailModalProps> = (
 
         <div className="text-center space-y-1">
           <span className="inline-block px-3 py-1 rounded-full bg-yellow-400/20 text-yellow-300 font-bold text-xs border border-yellow-400/30">
-            Mảnh trăng #{piece.pieceNumber} / 400
+            Mảnh trăng #{piece.pieceNumber}
           </span>
           <h3 className="font-display font-bold text-lg text-white">
             {contribution.displayName}
