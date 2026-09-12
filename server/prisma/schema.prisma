@@ -22,20 +22,19 @@ model Moon {
 }
 
 model MoonPiece {
-  id             String        @id @default(auto()) @map("_id") @db.ObjectId
-  moonId         String        @db.ObjectId
-  moon           Moon          @relation(fields: [moonId], references: [id], onDelete: Cascade)
-  row            Int
-  col            Int
-  pieceNumber    Int
-  isWithinMoon   Boolean       @default(true)
-  status         String        @default("AVAILABLE") // AVAILABLE, LOCKED, COMPLETED
-  lockedBy       String?       // sessionId
-  lockedUntil    DateTime?
-  contributionId String?       @unique @db.ObjectId
-  contribution   Contribution? @relation(fields: [contributionId], references: [id])
-  createdAt      DateTime      @default(now())
-  updatedAt      DateTime      @updatedAt
+  id           String        @id @default(auto()) @map("_id") @db.ObjectId
+  moonId       String        @db.ObjectId
+  moon         Moon          @relation(fields: [moonId], references: [id], onDelete: Cascade)
+  row          Int
+  col          Int
+  pieceNumber  Int
+  isWithinMoon Boolean       @default(true)
+  status       String        @default("AVAILABLE") // AVAILABLE, LOCKED, COMPLETED
+  lockedBy     String?       // sessionId
+  lockedUntil  DateTime?
+  contribution Contribution?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
 
   @@unique([moonId, row, col])
   @@index([status, lockedUntil])
@@ -45,6 +44,7 @@ model MoonPiece {
 model Contribution {
   id             String     @id @default(auto()) @map("_id") @db.ObjectId
   pieceId        String     @unique @db.ObjectId
+  piece          MoonPiece  @relation(fields: [pieceId], references: [id], onDelete: Cascade)
   sessionId      String
   displayName    String     @default("Người bạn nhỏ")
   message        String?
@@ -54,7 +54,6 @@ model Contribution {
   moderationNote String?
   createdAt      DateTime   @default(now())
   updatedAt      DateTime   @updatedAt
-  piece          MoonPiece?
 
   @@index([status, createdAt])
 }

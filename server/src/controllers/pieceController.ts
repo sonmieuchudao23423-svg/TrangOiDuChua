@@ -142,7 +142,6 @@ export class PieceController {
             status: 'COMPLETED',
             lockedBy: null,
             lockedUntil: null,
-            contributionId: contribution.id,
           },
         });
 

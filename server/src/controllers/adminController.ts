@@ -162,7 +162,6 @@ export class AdminController {
           status: 'AVAILABLE',
           lockedBy: null,
           lockedUntil: null,
-          contributionId: null,
         },
       });
 
@@ -231,12 +230,10 @@ export class AdminController {
         pieceNumber: number;
         isWithinMoon: boolean;
         status: string;
-        contributionId?: string | null;
       }> = [];
 
       let pieceNum = 1;
       let validCount = 0;
-      let contribIdx = 0;
 
       for (let r = 0; r < size; r++) {
         for (let c = 0; c < size; c++) {
@@ -246,17 +243,7 @@ export class AdminController {
           const d4 = Math.hypot(r + 1 - center, c + 1 - center);
           const isWithin = d1 <= radius && d2 <= radius && d3 <= radius && d4 <= radius;
 
-          let status = 'AVAILABLE';
-          let contributionId: string | null = null;
-
-          if (isWithin) {
-            validCount++;
-            if (contribIdx < contributions.length) {
-              status = 'COMPLETED';
-              contributionId = contributions[contribIdx].id;
-              contribIdx++;
-            }
-          }
+          if (isWithin) validCount++;
 
           newPiecesData.push({
             moonId: moon.id,
@@ -264,8 +251,7 @@ export class AdminController {
             col: c,
             pieceNumber: pieceNum++,
             isWithinMoon: isWithin,
-            status,
-            contributionId,
+            status: 'AVAILABLE',
           });
         }
       }
@@ -274,6 +260,26 @@ export class AdminController {
       await prisma.moonPiece.createMany({
         data: newPiecesData,
       });
+
+      // Remap existing contributions to the newly created pieces inside moon
+      const validPieces = await prisma.moonPiece.findMany({
+        where: { moonId: moon.id, isWithinMoon: true },
+        orderBy: { pieceNumber: 'asc' },
+        take: contributions.length,
+      });
+
+      for (let i = 0; i < contributions.length; i++) {
+        if (validPieces[i]) {
+          await prisma.contribution.update({
+            where: { id: contributions[i].id },
+            data: { pieceId: validPieces[i].id },
+          });
+          await prisma.moonPiece.update({
+            where: { id: validPieces[i].id },
+            data: { status: 'COMPLETED' },
+          });
+        }
+      }
 
       // Update moon metadata
       await prisma.moon.update({
@@ -311,25 +317,24 @@ export class AdminController {
   static async deleteContribution(req: Request, res: Response) {
     try {
       const { id } = req.params;
-      const piece = await prisma.moonPiece.findFirst({
-        where: { contributionId: id },
+      const contribution = await prisma.contribution.findUnique({
+        where: { id },
       });
 
-      if (piece) {
+      if (contribution) {
         await prisma.moonPiece.update({
-          where: { id: piece.id },
+          where: { id: contribution.pieceId },
           data: {
             status: 'AVAILABLE',
             lockedBy: null,
             lockedUntil: null,
-            contributionId: null,
           },
         });
-      }
 
-      await prisma.contribution.delete({
-        where: { id },
-      });
+        await prisma.contribution.delete({
+          where: { id },
+        });
+      }
 
       // Recount completed pieces
       const completedCount = await prisma.moonPiece.count({
