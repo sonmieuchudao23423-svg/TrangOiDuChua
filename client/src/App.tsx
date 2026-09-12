@@ -295,22 +295,22 @@ export const App: React.FC = () => {
 
             {/* RECENT PIECES SHOWCASE */}
             {recentContributions.length > 0 && (
-              <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 space-y-4">
+              <section className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4 space-y-4">
                 <div className="flex items-center justify-between">
-                  <h2 className="font-display font-bold text-lg sm:text-xl text-yellow-300">
+                  <h2 className="font-display font-bold text-base sm:text-lg text-yellow-300">
                     MẢNH GHÉP GẦN ĐÂY ✨
                   </h2>
                   <button
                     onClick={() => handleNavigate('gallery')}
                     className="text-xs font-bold text-yellow-400 hover:text-yellow-300 flex items-center gap-1"
                   >
-                    <span>Xem tất cả mảnh trăng</span>
+                    <span>Xem tất cả</span>
                     <ArrowRight className="w-3.5 h-3.5" />
                   </button>
                 </div>
 
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3 sm:gap-4">
-                  {recentContributions.slice(0, 6).map((c) => (
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+                  {recentContributions.slice(0, 3).map((c) => (
                     <div
                       key={c.id}
                       onClick={() => {
@@ -330,7 +330,7 @@ export const App: React.FC = () => {
                           #{c.piece?.pieceNumber || '?'}
                         </div>
                       </div>
-                      <div className="p-2 text-left bg-night-950/60">
+                      <div className="p-2.5 text-left bg-night-950/60">
                         <p className="font-bold text-xs text-yellow-300 truncate">
                           {c.displayName}
                         </p>
@@ -340,6 +340,16 @@ export const App: React.FC = () => {
                       </div>
                     </div>
                   ))}
+                </div>
+
+                <div className="text-center pt-2">
+                  <button
+                    onClick={() => handleNavigate('gallery')}
+                    className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl glass-panel text-yellow-300 hover:bg-yellow-400/20 text-xs font-bold transition-all border border-yellow-400/30 shadow-sm"
+                  >
+                    <span>Xem toàn bộ các mảnh trăng tại trang Mảnh Trăng</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </button>
                 </div>
               </section>
             )}
