@@ -13,6 +13,64 @@ async function bootstrap() {
     await prisma.$connect();
     console.log('🌕 [Database] Kết nối cơ sở dữ liệu SQLite/Prisma thành công!');
 
+    // Auto initialize pieces if database is empty (fresh deploy)
+    let moon = await prisma.moon.findFirst();
+    if (!moon) {
+      console.log('🌕 [Init] Khởi tạo cơ sở dữ liệu Vầng Trăng (13x13)...');
+      moon = await prisma.moon.create({
+        data: {
+          name: 'Vầng Trăng Trung Thu 2026 - Bầy Tiên Sa',
+          totalRows: 13,
+          totalCols: 13,
+          totalPieces: 169,
+          activePieces: 101,
+          completedPieces: 0,
+        },
+      });
+
+      const gridSize = 13;
+      const radius = 6;
+      const center = 6;
+      const pieceDataList: Array<{
+        moonId: string;
+        row: number;
+        col: number;
+        pieceNumber: number;
+        isWithinMoon: boolean;
+        status: string;
+      }> = [];
+
+      let pieceNumber = 1;
+      let validCount = 0;
+
+      for (let r = 0; r < gridSize; r++) {
+        for (let c = 0; c < gridSize; c++) {
+          const cornerDist = Math.hypot(r - center, c - center);
+          const isWithin = cornerDist <= radius + 0.1;
+          if (isWithin) validCount++;
+
+          pieceDataList.push({
+            moonId: moon.id,
+            row: r,
+            col: c,
+            pieceNumber: pieceNumber++,
+            isWithinMoon: isWithin,
+            status: 'AVAILABLE',
+          });
+        }
+      }
+
+      await prisma.moon.update({
+        where: { id: moon.id },
+        data: { activePieces: validCount },
+      });
+
+      await prisma.moonPiece.createMany({
+        data: pieceDataList,
+      });
+      console.log(`🌕 [Init] Đã khởi tạo thành công ${validCount} mảnh trăng hợp lệ!`);
+    }
+
     // Initial lock cleanup
     const released = await PieceLockService.releaseExpiredLocks();
     if (released > 0) {
