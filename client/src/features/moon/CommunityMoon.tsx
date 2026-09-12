@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { ZoomIn, ZoomOut, RotateCcw, Sparkles, Info, Eye } from 'lucide-react';
+import { Sparkles, Info, Eye } from 'lucide-react';
 import { MoonPiece, MoonData } from '../../types';
 
 interface CommunityMoonProps {
@@ -17,7 +17,6 @@ export const CommunityMoon: React.FC<CommunityMoonProps> = ({
   onViewContribution,
   isLoading = false,
 }) => {
-  const [zoom, setZoom] = useState(1);
   const [hoveredPiece, setHoveredPiece] = useState<MoonPiece | null>(null);
 
   // Group pieces by row dynamically based on moonData
@@ -30,40 +29,8 @@ export const CommunityMoon: React.FC<CommunityMoonProps> = ({
     return rows;
   }, [pieces, moonData?.totalRows]);
 
-  const handleZoomIn = () => setZoom((prev) => Math.min(1.8, Number((prev + 0.2).toFixed(2))));
-  const handleZoomOut = () => setZoom((prev) => Math.max(0.8, Number((prev - 0.2).toFixed(2))));
-  const handleResetZoom = () => setZoom(1);
-
   return (
     <div className="relative w-full flex flex-col items-center select-none">
-      {/* Floating Zoom Controls */}
-      <div className="absolute top-0 right-2 sm:right-6 z-20 flex items-center gap-1.5 p-1.5 rounded-2xl glass-panel bg-night-900/90 shadow-xl border border-yellow-400/30 backdrop-blur-md">
-        <button
-          onClick={handleZoomIn}
-          className="p-2 rounded-xl text-slate-300 hover:text-yellow-300 hover:bg-white/10 transition-colors"
-          title="Phóng to"
-          aria-label="Zoom in"
-        >
-          <ZoomIn className="w-4 h-4" />
-        </button>
-        <button
-          onClick={handleZoomOut}
-          className="p-2 rounded-xl text-slate-300 hover:text-yellow-300 hover:bg-white/10 transition-colors"
-          title="Thu nhỏ"
-          aria-label="Zoom out"
-        >
-          <ZoomOut className="w-4 h-4" />
-        </button>
-        <button
-          onClick={handleResetZoom}
-          className="p-2 rounded-xl text-slate-300 hover:text-yellow-300 hover:bg-white/10 transition-colors"
-          title="Đặt lại"
-          aria-label="Reset zoom"
-        >
-          <RotateCcw className="w-4 h-4" />
-        </button>
-      </div>
-
       {/* Legend / Status Hint - Percentage based without raw numbers */}
       <div className="flex flex-wrap items-center justify-center gap-5 text-xs font-bold text-slate-300 mb-6 px-4">
         <div className="flex items-center gap-2">
@@ -91,13 +58,8 @@ export const CommunityMoon: React.FC<CommunityMoonProps> = ({
           }}
         />
 
-        {/* Circular Moon Mask with Scaled Content */}
+        {/* Circular Moon Mask */}
         <div
-          style={{
-            transform: `scale(${zoom})`,
-            transformOrigin: 'center center',
-            transition: 'transform 0.25s cubic-bezier(0.2, 0, 0, 1)',
-          }}
           className="relative w-full h-full max-w-[520px] max-h-[520px] rounded-full overflow-hidden shadow-[0_0_50px_rgba(250,204,21,0.25)] border-4 border-yellow-300/40 bg-[#0d1430] flex-shrink-0"
         >
           {isLoading && (
