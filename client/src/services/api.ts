@@ -95,6 +95,28 @@ export const api = {
     });
   },
 
+  // Release locked piece via beacon / keepalive on tab close or navigation
+  releasePieceBeacon(pieceId: string): void {
+    const sessionId = getSessionId();
+    const url = `${API_BASE}/pieces/${pieceId}/release`;
+    const data = JSON.stringify({ sessionId });
+    try {
+      if (typeof navigator !== 'undefined' && navigator.sendBeacon) {
+        const blob = new Blob([data], { type: 'application/json' });
+        navigator.sendBeacon(url, blob);
+      } else {
+        fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: data,
+          keepalive: true,
+        }).catch(() => {});
+      }
+    } catch (e) {
+      // ignore
+    }
+  },
+
   // Gallery
   async getContributions(page = 1, limit = 24, search = ''): Promise<{
     items: Contribution[];

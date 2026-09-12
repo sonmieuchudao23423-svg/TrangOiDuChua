@@ -1,6 +1,6 @@
 import prisma from '../db';
 
-const LOCK_DURATION_MINUTES = 15;
+const LOCK_DURATION_MINUTES = 2;
 
 export class PieceLockService {
   /**

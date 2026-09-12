@@ -77,14 +77,14 @@ async function bootstrap() {
       console.log(`🧹 [Cleaner] Đã dọn dẹp ${released} mảnh trăng hết hạn giữ.`);
     }
 
-    // Periodic lock cleanup every 60 seconds
+    // Periodic lock cleanup every 15 seconds
     setInterval(async () => {
       try {
         await PieceLockService.releaseExpiredLocks();
       } catch (err) {
         console.error('Lỗi khi chạy dọn dẹp khóa định kỳ:', err);
       }
-    }, 60 * 1000);
+    }, 15 * 1000);
 
     const server = app.listen(PORT, () => {
       console.log(`✨ [Server] "BẠN GÓP GÌ CHO VẦNG TRĂNG?" đang chạy tại http://localhost:${PORT}`);

@@ -125,6 +125,33 @@ export const App: React.FC = () => {
     setPreviewArtworkUrl(null);
   };
 
+  // Auto release lock when user closes tab/browser or when 2 minutes pass
+  useEffect(() => {
+    if (!activePiece) return;
+
+    const currentPieceId = activePiece.id;
+
+    const handleUnload = () => {
+      api.releasePieceBeacon(currentPieceId);
+    };
+
+    window.addEventListener('beforeunload', handleUnload);
+    window.addEventListener('pagehide', handleUnload);
+
+    // 2 minutes auto-release timer (120 seconds)
+    const timer = setTimeout(async () => {
+      await handleCancelEditor();
+      setNotice('⏱️ Đã hết 2 phút giữ mảnh trăng. Mảnh trăng đã được tự động mở lại cho các bạn khác!');
+      setTimeout(() => setNotice(null), 6000);
+    }, 120 * 1000);
+
+    return () => {
+      window.removeEventListener('beforeunload', handleUnload);
+      window.removeEventListener('pagehide', handleUnload);
+      clearTimeout(timer);
+    };
+  }, [activePiece]);
+
   // Submission success
   const handleSubmissionSuccess = () => {
     loadMoonState();
