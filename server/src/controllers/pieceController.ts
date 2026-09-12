@@ -119,6 +119,11 @@ export class PieceController {
 
       // Save contribution & update piece status atomically
       const result = await prisma.$transaction(async (tx) => {
+        // Clean up any existing contribution on this pieceId if present to prevent unique constraint conflict
+        await tx.contribution.deleteMany({
+          where: { pieceId: piece.id },
+        });
+
         const contribution = await tx.contribution.create({
           data: {
             pieceId: piece.id,
@@ -141,11 +146,15 @@ export class PieceController {
           },
         });
 
-        // Increment Moon's completed count
+        // Calculate exact completed pieces count
+        const completedCount = await tx.moonPiece.count({
+          where: { moonId: piece.moonId, status: 'COMPLETED' },
+        });
+
         const moon = await tx.moon.update({
           where: { id: piece.moonId },
           data: {
-            completedPieces: { increment: 1 },
+            completedPieces: completedCount,
           },
         });
 
