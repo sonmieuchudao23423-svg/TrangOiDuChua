@@ -955,12 +955,12 @@ export const CreativeEditor: React.FC<CreativeEditorProps> = ({
               <Redo2 className="w-4 h-4" />
             </button>
             <button
-              onClick={() => setActiveTab('bg')}
+              onClick={() => photoInputRef.current?.click()}
               className="px-3.5 py-2 rounded-xl glass-panel text-yellow-300 hover:bg-yellow-400/20 text-xs font-bold flex items-center gap-1.5 transition-colors shadow-sm"
-              title="Đổi phông nền hoặc tranh minh hoạ"
+              title="Tải ảnh kỷ niệm từ thiết bị của bạn"
             >
-              <Palette className="w-4 h-4" />
-              <span>Đổi nền</span>
+              <Upload className="w-4 h-4" />
+              <span>Tải ảnh lên</span>
             </button>
             <button
               onClick={handleClear}
@@ -1315,34 +1315,21 @@ export const CreativeEditor: React.FC<CreativeEditorProps> = ({
           {/* Tab 5: Photo Frames */}
           {activeTab === 'frames' && (
             <div className="space-y-4 animate-fadeIn text-left">
-              {/* Frame Control Card */}
-              <div className="p-3.5 rounded-2xl bg-gradient-to-b from-amber-500/15 to-yellow-500/5 border border-yellow-400/30 space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-yellow-300">
-                    {selectedFrame ? `Đang dùng: ${selectedFrame.name}` : 'Chọn khung ảnh đại diện:'}
+              {/* Frame Control Info */}
+              {selectedFrame && (
+                <div className="p-3 rounded-2xl bg-gradient-to-b from-amber-500/15 to-yellow-500/5 border border-yellow-400/30 flex items-center justify-between">
+                  <span className="text-xs font-bold text-yellow-300 truncate">
+                    Đang dùng: {selectedFrame.name}
                   </span>
-                  {selectedFrame && (
-                    <button
-                      onClick={() => handleSelectFrame(null)}
-                      className="text-[11px] text-rose-400 hover:text-rose-300 font-semibold flex items-center gap-1"
-                    >
-                      <X className="w-3.5 h-3.5" />
-                      Gỡ khung
-                    </button>
-                  )}
+                  <button
+                    onClick={() => handleSelectFrame(null)}
+                    className="text-[11px] text-rose-400 hover:text-rose-300 font-semibold flex items-center gap-1 flex-shrink-0"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                    Gỡ khung
+                  </button>
                 </div>
-
-                <button
-                  onClick={() => photoInputRef.current?.click()}
-                  className="w-full py-3 rounded-2xl bg-gradient-to-r from-amber-500 via-yellow-400 to-amber-400 text-night-950 font-bold text-xs hover:brightness-110 flex items-center justify-center gap-2 shadow-lg active:scale-98 transition-all"
-                >
-                  <Upload className="w-4 h-4" />
-                  <span>📸 Tải ảnh lên</span>
-                </button>
-                <p className="text-[10px] text-slate-300 text-center">
-                  Ảnh của bạn sẽ tự động nằm ở lớp sau, lồng gọn bên trong khung tròn Trung Thu!
-                </p>
-              </div>
+              )}
 
               {/* Frames List */}
               <div className="space-y-2">
