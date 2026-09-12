@@ -3,12 +3,12 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "mongodb"
   url      = env("DATABASE_URL")
 }
 
 model Moon {
-  id              String      @id @default(cuid())
+  id              String      @id @default(auto()) @map("_id") @db.ObjectId
   name            String      @default("Vầng Trăng Trung Thu 2026")
   totalRows       Int         @default(20)
   totalCols       Int         @default(20)
@@ -22,8 +22,8 @@ model Moon {
 }
 
 model MoonPiece {
-  id             String        @id @default(cuid())
-  moonId         String
+  id             String        @id @default(auto()) @map("_id") @db.ObjectId
+  moonId         String        @db.ObjectId
   moon           Moon          @relation(fields: [moonId], references: [id], onDelete: Cascade)
   row            Int
   col            Int
@@ -32,7 +32,7 @@ model MoonPiece {
   status         String        @default("AVAILABLE") // AVAILABLE, LOCKED, COMPLETED
   lockedBy       String?       // sessionId
   lockedUntil    DateTime?
-  contributionId String?       @unique
+  contributionId String?       @unique @db.ObjectId
   contribution   Contribution? @relation(fields: [contributionId], references: [id])
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
@@ -43,8 +43,8 @@ model MoonPiece {
 }
 
 model Contribution {
-  id             String     @id @default(cuid())
-  pieceId        String     @unique
+  id             String     @id @default(auto()) @map("_id") @db.ObjectId
+  pieceId        String     @unique @db.ObjectId
   sessionId      String
   displayName    String     @default("Người bạn nhỏ")
   message        String?
@@ -60,7 +60,7 @@ model Contribution {
 }
 
 model AdminLog {
-  id        String   @id @default(cuid())
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
   action    String
   details   String?
   createdAt DateTime @default(now())
