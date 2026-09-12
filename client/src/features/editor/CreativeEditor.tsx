@@ -316,6 +316,9 @@ export const CreativeEditor: React.FC<CreativeEditorProps> = ({
 
   // Drawing Handlers
   const handleStartDraw = (e: React.MouseEvent | React.TouchEvent) => {
+    // Only allow drawing when user is specifically on the 'draw' (Vẽ) tab!
+    if (activeTab !== 'draw') return;
+
     setSelectedTextId(null);
     setSelectedStickerId(null);
 
@@ -345,7 +348,7 @@ export const CreativeEditor: React.FC<CreativeEditorProps> = ({
   };
 
   const handleDrawMove = (e: React.MouseEvent | React.TouchEvent) => {
-    if (!isDrawing || !lastPoint.current) return;
+    if (activeTab !== 'draw' || !isDrawing || !lastPoint.current) return;
     const drawCanvas = drawCanvasRef.current;
     if (!drawCanvas) return;
     const ctx = drawCanvas.getContext('2d');
@@ -809,7 +812,11 @@ export const CreativeEditor: React.FC<CreativeEditorProps> = ({
               onTouchStart={handleStartDraw}
               onTouchMove={handleDrawMove}
               onTouchEnd={handleEndDraw}
-              className="absolute inset-0 w-full h-full cursor-crosshair select-none z-10"
+              className={`absolute inset-0 w-full h-full select-none z-10 transition-opacity ${
+                activeTab === 'draw'
+                  ? 'cursor-crosshair pointer-events-auto'
+                  : 'pointer-events-none'
+              }`}
             />
 
             {/* Layer 3: Frame Overlay (Placed on top of background photo with transparent cutout) */}
