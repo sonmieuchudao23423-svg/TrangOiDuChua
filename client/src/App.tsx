@@ -102,7 +102,7 @@ export const App: React.FC = () => {
     if (piece.status === 'AVAILABLE') {
       handleStartContribute(piece.id);
     } else if (piece.status === 'LOCKED') {
-      setNotice('✨ Mảnh này đang có một bạn nhỏ sáng tạo dở dang.');
+      setNotice('✨ Mảnh này đang có một bạn nhỏ đang sáng tạo.');
       setTimeout(() => setNotice(null), 3000);
     }
   };
@@ -159,7 +159,7 @@ export const App: React.FC = () => {
 
   const handleNavigate = (tab: string) => {
     if (activePiece) {
-      if (confirm('Bạn đang vẽ dở mảnh trăng. Bạn có muốn hủy bỏ để chuyển trang?')) {
+      if (confirm('Bạn đang sáng tạo mảnh trăng. Bạn có muốn hủy bỏ để chuyển trang?')) {
         handleCancelEditor();
         setCurrentTab(tab);
         if (tab === 'moon') window.history.pushState({}, '', '/');
