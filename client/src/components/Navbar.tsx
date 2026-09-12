@@ -31,8 +31,12 @@ export const Navbar: React.FC<NavbarProps> = ({ currentTab, onNavigate, moonData
             onClick={() => handleItemClick('moon')}
             className="flex items-center gap-3 text-left group focus:outline-none"
           >
-            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-gradient-to-tr from-amber-500 to-yellow-300 flex items-center justify-center text-xl sm:text-2xl shadow-lg shadow-yellow-500/20 group-hover:scale-105 transition-transform">
-              🌕
+            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full overflow-hidden bg-gradient-to-tr from-amber-500 to-yellow-300 p-0.5 flex items-center justify-center shadow-lg shadow-yellow-500/20 group-hover:scale-105 transition-transform flex-shrink-0">
+              <img
+                src="/backgrounds/Logo.png"
+                alt="Bầy Tiên Sa Logo"
+                className="w-full h-full object-cover rounded-full bg-night-950"
+              />
             </div>
             <div>
               <span className="font-bold text-base sm:text-lg text-yellow-300 block tracking-normal leading-normal py-0.5">

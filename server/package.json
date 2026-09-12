@@ -31,6 +31,7 @@
     "typescript": "^5.7.3"
   },
   "devDependencies": {
+    "mongodb": "^7.6.0",
     "nodemon": "^3.1.9"
   }
 }
