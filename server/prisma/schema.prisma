@@ -1,0 +1,67 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Moon {
+  id              String      @id @default(cuid())
+  name            String      @default("Vầng Trăng Trung Thu 2026")
+  totalRows       Int         @default(20)
+  totalCols       Int         @default(20)
+  totalPieces     Int         @default(400)
+  activePieces    Int         @default(400)
+  completedPieces Int         @default(0)
+  status          String      @default("ACTIVE") // ACTIVE, COMPLETED
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  pieces          MoonPiece[]
+}
+
+model MoonPiece {
+  id             String        @id @default(cuid())
+  moonId         String
+  moon           Moon          @relation(fields: [moonId], references: [id], onDelete: Cascade)
+  row            Int
+  col            Int
+  pieceNumber    Int
+  isWithinMoon   Boolean       @default(true)
+  status         String        @default("AVAILABLE") // AVAILABLE, LOCKED, COMPLETED
+  lockedBy       String?       // sessionId
+  lockedUntil    DateTime?
+  contributionId String?       @unique
+  contribution   Contribution? @relation(fields: [contributionId], references: [id])
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  @@unique([moonId, row, col])
+  @@index([status, lockedUntil])
+  @@index([pieceNumber])
+}
+
+model Contribution {
+  id             String     @id @default(cuid())
+  pieceId        String     @unique
+  sessionId      String
+  displayName    String     @default("Người bạn nhỏ")
+  message        String?
+  imageUrl       String
+  thumbnailUrl   String
+  status         String     @default("APPROVED") // APPROVED, PENDING, REJECTED
+  moderationNote String?
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+  piece          MoonPiece?
+
+  @@index([status, createdAt])
+}
+
+model AdminLog {
+  id        String   @id @default(cuid())
+  action    String
+  details   String?
+  createdAt DateTime @default(now())
+}

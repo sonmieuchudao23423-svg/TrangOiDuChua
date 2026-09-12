@@ -1,0 +1,35 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Build output
+dist/
+build/
+*.local
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Database
+server/prisma/dev.db
+server/prisma/dev.db-journal
+
+# Uploads cache (optional, keep default structure)
+server/uploads/artworks/*
+server/uploads/thumbnails/*
+!server/uploads/artworks/.gitkeep
+!server/uploads/thumbnails/.gitkeep
+
+# System files
+.DS_Store
+Thumbs.db
