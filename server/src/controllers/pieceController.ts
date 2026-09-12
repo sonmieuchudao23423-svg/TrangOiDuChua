@@ -189,13 +189,13 @@ export class PieceController {
   static async releasePiece(req: Request, res: Response) {
     try {
       const { id } = req.params;
-      const { sessionId } = req.body;
+      const sessionId = req.body?.sessionId || req.query?.sessionId || req.headers['x-session-id'];
 
       if (!sessionId) {
         return res.status(400).json({ success: false, message: 'Thiếu mã phiên' });
       }
 
-      await PieceLockService.releaseLock(id, sessionId);
+      await PieceLockService.releaseLock(id, sessionId as string);
 
       return res.json({
         success: true,
@@ -203,6 +203,30 @@ export class PieceController {
       });
     } catch (error: any) {
       console.error('Lỗi nhả mảnh trăng:', error);
+      return res.status(500).json({ success: false, message: 'Lỗi server' });
+    }
+  }
+
+  /**
+   * POST /api/pieces/:id/heartbeat
+   * Keep-alive / extend lock while user is actively drawing
+   */
+  static async heartbeat(req: Request, res: Response) {
+    try {
+      const { id } = req.params;
+      const sessionId = req.body?.sessionId || req.query?.sessionId || req.headers['x-session-id'];
+
+      if (!sessionId) {
+        return res.status(400).json({ success: false, message: 'Thiếu mã phiên' });
+      }
+
+      const count = await PieceLockService.extendLock(id, sessionId as string);
+      return res.json({
+        success: count > 0,
+        message: count > 0 ? 'Đã gia hạn giữ mảnh thành công' : 'Mảnh không còn khóa bởi phiên này',
+      });
+    } catch (error: any) {
+      console.error('Lỗi gia hạn mảnh:', error);
       return res.status(500).json({ success: false, message: 'Lỗi server' });
     }
   }

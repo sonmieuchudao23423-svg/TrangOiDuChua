@@ -54,29 +54,6 @@ export const CreativeEditor: React.FC<CreativeEditorProps> = ({
   onPreview,
   onCancel,
 }) => {
-  // 2-minute countdown timer (120 seconds)
-  const [timeLeft, setTimeLeft] = useState(120);
-
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setTimeLeft((prev) => {
-        if (prev <= 1) {
-          clearInterval(timer);
-          onCancel();
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-    return () => clearInterval(timer);
-  }, [onCancel]);
-
-  const formatTime = (seconds: number) => {
-    const m = Math.floor(seconds / 60);
-    const s = seconds % 60;
-    return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
-  };
-
   // Layer 1: Background Canvas (Photo or Preset Color)
   const bgCanvasRef = useRef<HTMLCanvasElement | null>(null);
   // Layer 2: Drawing Canvas (Brush Strokes & Eraser)
@@ -778,18 +755,6 @@ export const CreativeEditor: React.FC<CreativeEditorProps> = ({
             <p className="text-[10px] sm:text-xs text-slate-300 hidden md:block truncate">
               Vẽ, dán sticker, ảnh & kéo thả chữ!
             </p>
-          </div>
-          {/* 2-minute lock timer badge */}
-          <div
-            className={`px-2 py-1 rounded-lg border text-[11px] sm:text-xs font-mono font-bold flex items-center gap-1 flex-shrink-0 ${
-              timeLeft <= 30
-                ? 'bg-rose-500/20 border-rose-400/50 text-rose-300 animate-pulse'
-                : 'bg-amber-400/10 border-amber-400/30 text-amber-300'
-            }`}
-            title="Thời gian giữ mảnh: 2 phút. Sau 2 phút mảnh sẽ tự động mở lại cho các bạn khác nếu chưa hoàn thành."
-          >
-            <span>⏱️</span>
-            <span>{formatTime(timeLeft)}</span>
           </div>
         </div>
 

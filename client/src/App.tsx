@@ -125,11 +125,16 @@ export const App: React.FC = () => {
     setPreviewArtworkUrl(null);
   };
 
-  // Auto release lock when user closes tab/browser or when 2 minutes pass
+  // Active Piece lock heartbeat & Inactivity auto-release (5 minutes of inactivity)
   useEffect(() => {
     if (!activePiece) return;
 
     const currentPieceId = activePiece.id;
+    let lastActivityTime = Date.now();
+
+    const recordActivity = () => {
+      lastActivityTime = Date.now();
+    };
 
     const handleUnload = () => {
       api.releasePieceBeacon(currentPieceId);
@@ -137,18 +142,36 @@ export const App: React.FC = () => {
 
     window.addEventListener('beforeunload', handleUnload);
     window.addEventListener('pagehide', handleUnload);
+    window.addEventListener('pointerdown', recordActivity, { passive: true });
+    window.addEventListener('keydown', recordActivity, { passive: true });
+    window.addEventListener('touchstart', recordActivity, { passive: true });
 
-    // 2 minutes auto-release timer (120 seconds)
-    const timer = setTimeout(async () => {
-      await handleCancelEditor();
-      setNotice('⏱️ Đã hết 2 phút giữ mảnh trăng. Mảnh trăng đã được tự động mở lại cho các bạn khác!');
-      setTimeout(() => setNotice(null), 6000);
-    }, 120 * 1000);
+    // Send heartbeat every 30 seconds while user is active
+    const heartbeatInterval = setInterval(() => {
+      const idleTime = Date.now() - lastActivityTime;
+      if (idleTime < 5 * 60 * 1000) {
+        api.heartbeatPiece(currentPieceId);
+      }
+    }, 30 * 1000);
+
+    // Check for 5 minutes of total inactivity
+    const inactivityInterval = setInterval(async () => {
+      const idleTime = Date.now() - lastActivityTime;
+      if (idleTime >= 5 * 60 * 1000) {
+        await handleCancelEditor();
+        setNotice('⏱️ Do không có hoạt động trong 5 phút, mảnh trăng đã được tự động mở lại cho các bạn khác!');
+        setTimeout(() => setNotice(null), 6000);
+      }
+    }, 5000);
 
     return () => {
       window.removeEventListener('beforeunload', handleUnload);
       window.removeEventListener('pagehide', handleUnload);
-      clearTimeout(timer);
+      window.removeEventListener('pointerdown', recordActivity);
+      window.removeEventListener('keydown', recordActivity);
+      window.removeEventListener('touchstart', recordActivity);
+      clearInterval(heartbeatInterval);
+      clearInterval(inactivityInterval);
     };
   }, [activePiece]);
 

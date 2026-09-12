@@ -1,6 +1,6 @@
 import prisma from '../db';
 
-const LOCK_DURATION_MINUTES = 2;
+const LOCK_DURATION_MINUTES = 5;
 
 export class PieceLockService {
   /**
@@ -155,6 +155,27 @@ export class PieceLockService {
 
     // If concurrency race happened on this piece, retry recursively once
     return this.claimPiece(sessionId);
+  }
+
+  /**
+   * Extend lock expiration for active session (heartbeat)
+   */
+  static async extendLock(pieceId: string, sessionId: string): Promise<number> {
+    const now = new Date();
+    const result = await prisma.moonPiece.updateMany({
+      where: {
+        id: pieceId,
+        lockedBy: sessionId,
+        status: 'LOCKED',
+        lockedUntil: {
+          gt: now,
+        },
+      },
+      data: {
+        lockedUntil: new Date(Date.now() + LOCK_DURATION_MINUTES * 60 * 1000),
+      },
+    });
+    return result.count;
   }
 
   /**

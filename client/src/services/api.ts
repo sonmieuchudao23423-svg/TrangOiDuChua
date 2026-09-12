@@ -95,6 +95,22 @@ export const api = {
     });
   },
 
+  // Send heartbeat to extend piece lock while user is actively drawing
+  async heartbeatPiece(pieceId: string): Promise<boolean> {
+    try {
+      const sessionId = getSessionId();
+      const res = await fetch(`${API_BASE}/pieces/${pieceId}/heartbeat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionId }),
+      });
+      const json = await res.json();
+      return !!json.success;
+    } catch (e) {
+      return false;
+    }
+  },
+
   // Release locked piece via beacon / keepalive on tab close or navigation
   releasePieceBeacon(pieceId: string): void {
     const sessionId = getSessionId();
