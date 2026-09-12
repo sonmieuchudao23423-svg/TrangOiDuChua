@@ -9,6 +9,7 @@ import {
 import confetti from 'canvas-confetti';
 import { MoonPiece } from '../../types';
 import { api } from '../../services/api';
+import { saveOrShareImage } from '../../utils/downloadHelper';
 
 interface SubmissionModalProps {
   piece: MoonPiece;
@@ -83,14 +84,12 @@ export const SubmissionModal: React.FC<SubmissionModalProps> = ({
   };
 
   // Direct download raw artwork PNG
-  const handleDownloadDirectArtwork = () => {
+  const handleDownloadDirectArtwork = async () => {
     const cleanName = (displayName || 'BanNho').replace(/[^a-zA-Z0-9_\u00C0-\u024F\u1EA0-\u1EF9]/g, '_');
-    const link = document.createElement('a');
-    link.download = `Manh_${piece.pieceNumber}_${cleanName}_TrungThu2026.png`;
-    link.href = artworkDataUrl;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    await saveOrShareImage(
+      artworkDataUrl,
+      `Manh_${piece.pieceNumber}_${cleanName}_TrungThu2026.png`
+    );
   };
 
   // Generate downloadable souvenir card
@@ -129,7 +128,7 @@ export const SubmissionModal: React.FC<SubmissionModalProps> = ({
     // Artwork
     const img = new Image();
     img.crossOrigin = 'anonymous';
-    img.onload = () => {
+    img.onload = async () => {
       ctx.drawImage(img, 150, 175, 500, 500);
 
       // Card Metadata
@@ -155,11 +154,12 @@ export const SubmissionModal: React.FC<SubmissionModalProps> = ({
       ctx.font = '14px "Quicksand", sans-serif';
       ctx.fillText('Một mảnh từ bạn, một vầng trăng của Bầy • Bầy Tiên Sa 2026', 400, 890);
 
-      // Trigger download
-      const link = document.createElement('a');
-      link.download = `trang-oi-du-chua-manh-${piece.pieceNumber}.png`;
-      link.href = canvas.toDataURL('image/png');
-      link.click();
+      // Trigger download or native share sheet
+      const cardDataUrl = canvas.toDataURL('image/png');
+      await saveOrShareImage(
+        cardDataUrl,
+        `The_Ky_Niem_Trang_Oi_Du_Chua_Manh_${piece.pieceNumber}.png`
+      );
     };
     img.src = artworkDataUrl;
   };
@@ -271,20 +271,11 @@ export const SubmissionModal: React.FC<SubmissionModalProps> = ({
             )}
 
             {/* Actions */}
-            <div className="flex items-center gap-3 pt-2">
-              <button
-                type="button"
-                onClick={onBackToEditor}
-                disabled={isSubmitting}
-                className="flex-1 py-3 rounded-xl glass-panel text-slate-300 hover:text-white text-sm font-bold flex items-center justify-center gap-2"
-              >
-                <ArrowLeft className="w-4 h-4" />
-                Quay lại sửa
-              </button>
+            <div className="flex flex-col sm:flex-row items-stretch gap-2.5 pt-2">
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="flex-1 py-3 rounded-xl bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-400 text-night-950 font-bold text-sm hover:brightness-110 shadow-lg shadow-yellow-400/40 flex items-center justify-center gap-2 disabled:opacity-50"
+                className="w-full sm:flex-1 py-3 sm:py-3.5 px-4 rounded-xl bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-400 text-night-950 font-bold text-sm sm:text-base hover:brightness-110 shadow-lg shadow-yellow-400/40 flex items-center justify-center gap-2 disabled:opacity-50 transition-all active:scale-98 order-1 sm:order-2 whitespace-nowrap"
               >
                 {isSubmitting ? (
                   <>
@@ -294,6 +285,15 @@ export const SubmissionModal: React.FC<SubmissionModalProps> = ({
                 ) : (
                   <span>🌕 ĐƯA MẢNH VỀ BẦY</span>
                 )}
+              </button>
+              <button
+                type="button"
+                onClick={onBackToEditor}
+                disabled={isSubmitting}
+                className="w-full sm:flex-1 py-2.5 sm:py-3.5 px-4 rounded-xl glass-panel text-slate-300 hover:text-white text-xs sm:text-sm font-bold flex items-center justify-center gap-2 transition-all order-2 sm:order-1"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                <span>Quay lại sửa</span>
               </button>
             </div>
           </form>

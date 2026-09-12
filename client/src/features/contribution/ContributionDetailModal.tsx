@@ -1,6 +1,7 @@
 import React from 'react';
 import { X, Calendar, User, Heart, Sparkles, Download } from 'lucide-react';
 import { MoonPiece } from '../../types';
+import { saveOrShareImage } from '../../utils/downloadHelper';
 
 interface ContributionDetailModalProps {
   piece: MoonPiece;
@@ -14,16 +15,11 @@ export const ContributionDetailModal: React.FC<ContributionDetailModalProps> = (
   const contribution = piece.contribution;
   if (!contribution) return null;
 
-  const handleDownload = () => {
+  const handleDownload = async () => {
     const url = contribution.imageUrl || contribution.thumbnailUrl;
     if (!url) return;
     const cleanName = (contribution.displayName || 'BanNho').replace(/[^a-zA-Z0-9_\u00C0-\u024F\u1EA0-\u1EF9]/g, '_');
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `Manh_${piece.pieceNumber}_${cleanName}_TrungThu2026.png`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    await saveOrShareImage(url, `Manh_${piece.pieceNumber}_${cleanName}_TrungThu2026.png`);
   };
 
   return (

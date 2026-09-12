@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { MoonPiece, StickerItem, BackgroundPreset, FrameItem } from '../../types';
 import { STICKERS, BACKGROUND_PRESETS, COLOR_PALETTE, FRAMES } from '../../utils/stickers';
+import { saveOrShareImage } from '../../utils/downloadHelper';
 import { api } from '../../services/api';
 
 interface CreativeEditorProps {
@@ -721,12 +722,10 @@ export const CreativeEditor: React.FC<CreativeEditorProps> = ({
     });
 
     const finalDataUrl = finalCanvas.toDataURL('image/png');
-    const link = document.createElement('a');
-    link.download = `Manh_trang_${piece.pieceNumber}_Bay_Tien_Sa.png`;
-    link.href = finalDataUrl;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    await saveOrShareImage(
+      finalDataUrl,
+      `Manh_trang_${piece.pieceNumber}_Bay_Tien_Sa.png`
+    );
   };
 
   return (
@@ -741,16 +740,16 @@ export const CreativeEditor: React.FC<CreativeEditorProps> = ({
       />
 
       {/* Header Bar */}
-      <div className="flex items-center justify-between glass-panel rounded-2xl p-3 sm:p-4 border border-yellow-400/30 gap-2">
-        <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
-          <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-yellow-400 text-night-950 font-bold flex items-center justify-center text-sm sm:text-lg shadow-md flex-shrink-0">
+      <div className="flex items-center justify-between glass-panel rounded-2xl p-2.5 sm:p-4 border border-yellow-400/30 gap-2">
+        <div className="flex items-center gap-2 min-w-0">
+          <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-yellow-400 text-night-950 font-bold flex items-center justify-center text-xs sm:text-base shadow-md flex-shrink-0">
             #{piece.pieceNumber}
           </div>
           <div className="min-w-0">
-            <h2 className="font-display font-bold text-xs sm:text-lg text-yellow-300 truncate">
-              SÁNG TẠO MẢNH TRĂNG
+            <h2 className="font-display font-bold text-xs sm:text-base text-yellow-300 truncate">
+              MẢNH #{piece.pieceNumber}
             </h2>
-            <p className="text-[10px] sm:text-xs text-slate-300 hidden xs:block sm:block truncate">
+            <p className="text-[10px] sm:text-xs text-slate-300 hidden md:block truncate">
               Vẽ, dán sticker, ảnh & kéo thả chữ!
             </p>
           </div>
@@ -763,7 +762,7 @@ export const CreativeEditor: React.FC<CreativeEditorProps> = ({
             title="Tải ảnh tác phẩm này về máy"
           >
             <Download className="w-4 h-4" />
-            <span className="hidden md:inline">Lưu về máy</span>
+            <span className="hidden sm:inline">Lưu ảnh</span>
           </button>
           <button
             onClick={onCancel}
@@ -775,7 +774,7 @@ export const CreativeEditor: React.FC<CreativeEditorProps> = ({
           </button>
           <button
             onClick={handleProceedToPreview}
-            className="px-3.5 sm:px-5 py-2 sm:py-2.5 rounded-xl bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-400 text-night-950 font-bold text-xs sm:text-sm hover:brightness-110 shadow-lg shadow-yellow-400/40 flex items-center gap-1.5 transform hover:scale-[1.02] transition-transform"
+            className="px-3 sm:px-5 py-2 sm:py-2.5 rounded-xl bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-400 text-night-950 font-bold text-xs sm:text-sm hover:brightness-110 shadow-lg shadow-yellow-400/40 flex items-center gap-1.5 transform active:scale-95 transition-transform"
           >
             <span>🌕 GÓP MẢNH</span>
           </button>
