@@ -26,16 +26,21 @@ export class MoonController {
         });
       }
 
+      const activePiecesCount = await prisma.moonPiece.count({
+        where: { moonId: moon.id, isWithinMoon: true },
+      });
+      const activePieces = activePiecesCount > 0 ? activePiecesCount : (moon.activePieces || 121);
+
       const completedCount = await prisma.moonPiece.count({
-        where: { moonId: moon.id, status: 'COMPLETED' },
+        where: { moonId: moon.id, isWithinMoon: true, status: 'COMPLETED' },
       });
 
       const lockedCount = await prisma.moonPiece.count({
-        where: { moonId: moon.id, status: 'LOCKED' },
+        where: { moonId: moon.id, isWithinMoon: true, status: 'LOCKED' },
       });
 
-      const availableCount = moon.activePieces - completedCount - lockedCount;
-      const progressPercent = Math.min(100, Math.round((completedCount / moon.activePieces) * 100));
+      const availableCount = activePieces - completedCount - lockedCount;
+      const progressPercent = Math.min(100, Math.round((completedCount / activePieces) * 100));
 
       let milestoneMessage = 'Chưa đâu… Trăng vẫn đang chờ mảnh của bạn!';
       if (progressPercent >= 100) {

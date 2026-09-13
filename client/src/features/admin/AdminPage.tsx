@@ -427,9 +427,10 @@ export const AdminPage: React.FC = () => {
     const currPieces = moonOverview?.activePieces || calculateCirclePiecesCount(moonOverview?.totalRows || 13);
     const targetPieces = calculateCirclePiecesCount(selectedGridSize);
     const addedDiff = targetPieces - currPieces;
+    const actionText = addedDiff > 0 ? 'MỞ RỘNG' : addedDiff < 0 ? 'THU GỌN' : 'CẬP NHẬT';
 
     const confirmed = confirm(
-      `🌕 XÁC NHẬN MỞ RỘNG VẦNG TRĂNG:\n\n• Quy mô hiện tại: ${moonOverview?.totalRows || 13}x${moonOverview?.totalCols || 13} (${currPieces} mảnh)\n• Quy mô mới: ${selectedGridSize}x${selectedGridSize} (${targetPieces} mảnh)\n• Số lượng mảnh mở rộng thêm: +${addedDiff > 0 ? addedDiff : 0} mảnh mới!\n• Dữ liệu bài nộp cũ: BẢO LƯU 100% (${allContributions.length} bài nộp)\n\nBạn có chắc chắn muốn áp dụng?`
+      `🌕 XÁC NHẬN ${actionText} VẦNG TRĂNG:\n\n• Quy mô hiện tại: ${moonOverview?.totalRows || 13}x${moonOverview?.totalCols || 13} (${currPieces} mảnh)\n• Quy mô mới: ${selectedGridSize}x${selectedGridSize} (${targetPieces} mảnh)\n• Thay đổi số lượng: ${addedDiff > 0 ? `+${addedDiff}` : addedDiff} mảnh\n• Dữ liệu bài nộp cũ: BẢO LƯU 100% (${allContributions.length} bài nộp)\n\nBạn có chắc chắn muốn áp dụng?`
     );
     if (!confirmed) return;
 
@@ -439,7 +440,7 @@ export const AdminPage: React.FC = () => {
       alert(res.message);
       loadData();
     } catch (err: any) {
-      alert('Lỗi mở rộng vầng trăng: ' + err.message);
+      alert('Lỗi điều chỉnh quy mô: ' + err.message);
     } finally {
       setIsResizing(false);
     }
@@ -646,7 +647,7 @@ export const AdminPage: React.FC = () => {
           <div className="glass-card rounded-2xl p-4 border border-yellow-400/20">
             <span className="text-xs text-slate-400 font-semibold">Quy mô hiện tại</span>
             <p className="text-2xl font-bold text-white mt-1">
-              {stats.totalPieces} <span className="text-xs text-slate-400">({moonOverview?.activePieces || '~101'} tròn)</span>
+              {stats.totalPieces} <span className="text-xs text-slate-400 font-normal">mảnh tròn</span>
             </p>
           </div>
           <div className="glass-card rounded-2xl p-4 border border-yellow-400/20">
@@ -706,7 +707,7 @@ export const AdminPage: React.FC = () => {
           }`}
         >
           <Layers className="w-4 h-4" />
-          <span>Mở Rộng Thêm Mảnh</span>
+          <span>Điều Chỉnh Quy Mô</span>
         </button>
       </div>
 
@@ -1046,10 +1047,10 @@ export const AdminPage: React.FC = () => {
           <div>
             <h2 className="font-bold text-base sm:text-lg text-yellow-300 flex items-center gap-2">
               <Layers className="w-5 h-5" />
-              <span>Mở Rộng Quy Mô Vầng Trăng (Khi Trăng Đầy)</span>
+              <span>Điều Chỉnh Quy Mô Vầng Trăng (Thu Gọn hoặc Mở Rộng)</span>
             </h2>
             <p className="text-xs text-slate-300 mt-1">
-              Xem rõ số lượng mảnh hiện tại, số mảnh sẽ được thêm vào và xem hình ảnh mô phỏng trực quan trước khi thực hiện mở rộng.
+              Bạn có thể dễ dàng thu gọn bớt số ô (ví dụ 9x9 với 57 mảnh hoặc 11x11 với 89 mảnh) hoặc mở rộng thêm mảnh khi trăng đầy. Toàn bộ bài nộp hiện tại luôn được bảo lưu 100%.
             </p>
           </div>
 
@@ -1070,13 +1071,16 @@ export const AdminPage: React.FC = () => {
 
             {/* Target Selected State */}
             <div className="space-y-1">
-              <span className="text-xs font-semibold text-amber-300">2. Quy mô sau khi mở rộng:</span>
+              <span className="text-xs font-semibold text-amber-300">2. Quy mô dự kiến:</span>
               <p className="text-lg font-bold text-yellow-300">
                 Lưới {selectedGridSize}x{selectedGridSize}{' '}
                 <span className="text-white">({targetPiecesCount} mảnh tròn)</span>
               </p>
               <p className="text-xs text-amber-200">
-                Mở rộng thêm: <strong className="text-emerald-400">+{addedCount > 0 ? addedCount : 0} ô mới</strong>
+                Chênh lệch:{' '}
+                <strong className={addedCount >= 0 ? 'text-emerald-400' : 'text-rose-400'}>
+                  {addedCount > 0 ? `+${addedCount} ô mới` : addedCount < 0 ? `${addedCount} ô (thu gọn)` : 'Không đổi'}
+                </strong>
               </p>
             </div>
 
@@ -1084,10 +1088,10 @@ export const AdminPage: React.FC = () => {
             <div className="space-y-1 flex flex-col justify-center">
               <span className="text-xs font-semibold text-emerald-400 flex items-center gap-1">
                 <CheckCircle2 className="w-3.5 h-3.5" />
-                <span>Bảo lưu 100% dữ liệu cũ:</span>
+                <span>Bảo lưu 100% dữ liệu:</span>
               </span>
               <p className="text-xs text-slate-300">
-                Toàn bộ <strong className="text-yellow-300">{allContributions.length} bài nộp</strong> của các bạn nhỏ được giữ nguyên vẹn hoàn toàn!
+                Toàn bộ <strong className="text-yellow-300">{allContributions.length} bài nộp</strong> của các bạn nhỏ được sắp xếp chuyển giao nguyên vẹn!
               </p>
             </div>
           </div>
@@ -1095,16 +1099,18 @@ export const AdminPage: React.FC = () => {
           {/* Grid Selection Cards */}
           <div>
             <span className="text-xs font-bold text-slate-200 block mb-2">
-              Chọn mức quy mô bạn muốn nâng cấp:
+              Chọn mức quy mô bạn muốn thiết lập cho Vầng Trăng:
             </span>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-2.5">
               {[
-                { size: 13, name: 'Lưới 13x13' },
-                { size: 15, name: 'Lưới 15x15' },
-                { size: 17, name: 'Lưới 17x17' },
-                { size: 19, name: 'Lưới 19x19' },
-                { size: 21, name: 'Lưới 21x21' },
-                { size: 25, name: 'Lưới 25x25' },
+                { size: 7, name: 'Lưới 7x7', badge: 'Thu gọn' },
+                { size: 9, name: 'Lưới 9x9', badge: 'Rút gọn đẹp' },
+                { size: 11, name: 'Lưới 11x11', badge: 'Vừa vặn' },
+                { size: 13, name: 'Lưới 13x13', badge: 'Tiêu chuẩn' },
+                { size: 15, name: 'Lưới 15x15', badge: 'Mở rộng' },
+                { size: 17, name: 'Lưới 17x17', badge: 'Lớn' },
+                { size: 19, name: 'Lưới 19x19', badge: 'Rất lớn' },
+                { size: 21, name: 'Lưới 21x21', badge: 'Khổng lồ' },
               ].map((g) => {
                 const isSelected = selectedGridSize === g.size;
                 const isCurrent = currentGridSize === g.size;
@@ -1116,14 +1122,14 @@ export const AdminPage: React.FC = () => {
                     key={g.size}
                     type="button"
                     onClick={() => setSelectedGridSize(g.size)}
-                    className={`p-3.5 rounded-2xl border-2 text-left transition-all relative ${
+                    className={`p-3 rounded-2xl border-2 text-left transition-all relative ${
                       isSelected
                         ? 'border-yellow-400 bg-yellow-400/20 shadow-xl scale-[1.02] ring-2 ring-yellow-400/30'
                         : 'border-white/10 bg-white/5 hover:border-yellow-400/40 hover:bg-white/10'
                     }`}
                   >
                     {isCurrent && (
-                      <span className="absolute top-2 right-2 text-[9px] px-1.5 py-0.5 rounded-full bg-yellow-400 text-night-950 font-extrabold">
+                      <span className="absolute top-1.5 right-1.5 text-[8px] px-1.5 py-0.5 rounded-full bg-yellow-400 text-night-950 font-extrabold">
                         HIỆN TẠI
                       </span>
                     )}
@@ -1132,7 +1138,7 @@ export const AdminPage: React.FC = () => {
                       {count} mảnh
                     </span>
                     <span className="text-[10px] text-slate-400 block mt-1">
-                      {diff > 0 ? `+${diff} mảnh mới` : isCurrent ? 'Quy mô đang dùng' : `${diff} mảnh`}
+                      {diff > 0 ? `+${diff} ô` : diff < 0 ? `${diff} ô` : 'Đang dùng'}
                     </span>
                   </button>
                 );
@@ -1146,10 +1152,10 @@ export const AdminPage: React.FC = () => {
               <div>
                 <span className="text-xs font-bold text-yellow-300 flex items-center gap-1.5">
                   <Eye className="w-4 h-4" />
-                  <span>Hình ảnh mô phỏng vầng trăng sau khi mở rộng ({selectedGridSize}x{selectedGridSize}):</span>
+                  <span>Hình ảnh mô phỏng vầng trăng sau khi điều chỉnh ({selectedGridSize}x{selectedGridSize}):</span>
                 </span>
                 <p className="text-[11px] text-slate-400 mt-0.5">
-                  Các ô màu xanh lá / viền sáng là những mảnh mới sẽ được mở thêm xung quanh vầng trăng.
+                  Mô phỏng mặt trăng tròn với {targetPiecesCount} mảnh ghép. Toàn bộ bài nộp hiện tại ({allContributions.length}) sẽ tự động phân bổ vào các ô đầu tiên.
                 </p>
               </div>
 
@@ -1161,12 +1167,14 @@ export const AdminPage: React.FC = () => {
                 </div>
                 <div className="flex items-center gap-1">
                   <div className="w-3 h-3 rounded-sm bg-slate-700/80 border border-slate-600" />
-                  <span className="text-slate-300">Đang có sẵn</span>
+                  <span className="text-slate-300">Ô trống</span>
                 </div>
-                <div className="flex items-center gap-1">
-                  <div className="w-3 h-3 rounded-sm bg-emerald-500 border border-emerald-300 shadow-[0_0_6px_#10b981]" />
-                  <span className="text-emerald-300 font-bold">Mảnh mới (+{addedCount > 0 ? addedCount : 0})</span>
-                </div>
+                {addedCount > 0 && (
+                  <div className="flex items-center gap-1">
+                    <div className="w-3 h-3 rounded-sm bg-emerald-500 border border-emerald-300 shadow-[0_0_6px_#10b981]" />
+                    <span className="text-emerald-300 font-bold">Mảnh mới (+{addedCount})</span>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -1185,33 +1193,27 @@ export const AdminPage: React.FC = () => {
                   {Array.from({ length: selectedGridSize * selectedGridSize }).map((_, idx) => {
                     const r = Math.floor(idx / selectedGridSize);
                     const c = idx % selectedGridSize;
-                    const center = selectedGridSize / 2;
-                    const radius = selectedGridSize / 2;
+                    const center = (selectedGridSize - 1) / 2;
+                    const radius = (selectedGridSize - 1) / 2;
 
-                    const d1 = Math.hypot(r - center, c - center);
-                    const d2 = Math.hypot(r - center, c + 1 - center);
-                    const d3 = Math.hypot(r + 1 - center, c - center);
-                    const d4 = Math.hypot(r + 1 - center, c + 1 - center);
-                    const isWithin = d1 <= radius && d2 <= radius && d3 <= radius && d4 <= radius;
+                    const isWithin = Math.hypot(r - center, c - center) <= radius + 0.1;
 
                     if (!isWithin) {
                       return <div key={idx} className="w-full h-full opacity-0 pointer-events-none" />;
                     }
 
                     // Check if this piece belongs to existing moon or is a new expansion piece
-                    const currCenter = currentGridSize / 2;
-                    const currRadius = currentGridSize / 2;
-                    // Approximate mapping to old grid
-                    const isOldCell = selectedGridSize === currentGridSize || (
-                      Math.abs(r - center) < currRadius - 0.5 &&
-                      Math.abs(c - center) < currRadius - 0.5
+                    const currRadius = (currentGridSize - 1) / 2;
+                    const isOldCell = selectedGridSize <= currentGridSize || (
+                      Math.abs(r - center) <= currRadius &&
+                      Math.abs(c - center) <= currRadius
                     );
 
                     return (
                       <div
                         key={idx}
                         className={`w-full h-full rounded-[2px] transition-all ${
-                          !isOldCell
+                          !isOldCell && addedCount > 0
                             ? 'bg-emerald-500/80 border border-emerald-300 shadow-[0_0_4px_#10b981]'
                             : 'bg-slate-700/80 border border-slate-600 hover:border-yellow-400'
                         }`}
@@ -1234,13 +1236,13 @@ export const AdminPage: React.FC = () => {
               {isResizing ? (
                 <>
                   <RefreshCw className="w-4 h-4 animate-spin" />
-                  <span>Đang mở rộng vầng trăng...</span>
+                  <span>Đang cập nhật quy mô vầng trăng...</span>
                 </>
               ) : (
                 <>
                   <PlusCircle className="w-4 h-4" />
                   <span>
-                    Xác Nhận Mở Rộng Lên {selectedGridSize}x{selectedGridSize} ({targetPiecesCount} mảnh)
+                    Xác Nhận Đổi Sang Lưới {selectedGridSize}x{selectedGridSize} ({targetPiecesCount} mảnh)
                   </span>
                 </>
               )}

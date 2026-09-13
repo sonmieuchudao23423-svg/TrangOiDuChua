@@ -14,10 +14,10 @@ export class AdminController {
 
       const [totalPieces, completedPieces, lockedPieces, availablePieces, totalContributions] =
         await Promise.all([
-          prisma.moonPiece.count(),
-          prisma.moonPiece.count({ where: { status: 'COMPLETED' } }),
-          prisma.moonPiece.count({ where: { status: 'LOCKED' } }),
-          prisma.moonPiece.count({ where: { status: 'AVAILABLE' } }),
+          prisma.moonPiece.count({ where: { isWithinMoon: true } }),
+          prisma.moonPiece.count({ where: { isWithinMoon: true, status: 'COMPLETED' } }),
+          prisma.moonPiece.count({ where: { isWithinMoon: true, status: 'LOCKED' } }),
+          prisma.moonPiece.count({ where: { isWithinMoon: true, status: 'AVAILABLE' } }),
           prisma.contribution.count(),
         ]);
 
@@ -29,7 +29,7 @@ export class AdminController {
           lockedPieces,
           availablePieces,
           totalContributions,
-          progress: Math.round((completedPieces / totalPieces) * 100),
+          progress: totalPieces > 0 ? Math.round((completedPieces / totalPieces) * 100) : 0,
         },
       });
     } catch (error: any) {
@@ -47,7 +47,7 @@ export class AdminController {
       const pageNum = parseInt(page as string, 10) || 1;
       const limitNum = parseInt(limit as string, 10) || 50;
 
-      const where: any = {};
+      const where: any = { isWithinMoon: true };
       if (status && typeof status === 'string') {
         where.status = status;
       }
@@ -191,8 +191,8 @@ export class AdminController {
     try {
       const { gridSize } = req.body;
       const size = parseInt(gridSize, 10);
-      if (!size || size < 11 || size > 35) {
-        return res.status(400).json({ success: false, message: 'Kích thước lưới không hợp lệ (11 - 35)' });
+      if (!size || size < 7 || size > 35) {
+        return res.status(400).json({ success: false, message: 'Kích thước lưới không hợp lệ (7 - 35)' });
       }
 
       let moon = await prisma.moon.findFirst();
