@@ -214,12 +214,33 @@ export const api = {
     return json;
   },
 
+  async adminShufflePieces() {
+    const res = await fetch(`${API_BASE}/admin/shuffle-pieces`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+    });
+    const json = await res.json();
+    if (!json.success) throw new Error(json.message || 'Lỗi xáo trộn vị trí mảnh trăng');
+    return json;
+  },
+
   async adminDeleteContribution(contributionId: string) {
     const res = await fetch(`${API_BASE}/admin/contribution/${contributionId}`, {
       method: 'DELETE',
     });
     const json = await res.json();
     if (!json.success) throw new Error(json.message || 'Lỗi xóa bài đóng góp');
+    return json;
+  },
+
+  async adminUpdateContribution(contributionId: string, displayName: string, message: string) {
+    const res = await fetch(`${API_BASE}/admin/contribution/${contributionId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ displayName, message }),
+    });
+    const json = await res.json();
+    if (!json.success) throw new Error(json.message || 'Lỗi cập nhật bài nộp');
     return json;
   },
 

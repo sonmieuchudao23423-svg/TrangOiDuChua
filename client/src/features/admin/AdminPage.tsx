@@ -25,6 +25,9 @@ import {
   ArrowRight,
   ChevronLeft,
   ChevronRight,
+  Edit3,
+  ExternalLink,
+  Shuffle,
 } from 'lucide-react';
 import JSZip from 'jszip';
 import { api } from '../../services/api';
@@ -62,6 +65,18 @@ export const AdminPage: React.FC = () => {
   // Resize Grid State
   const [selectedGridSize, setSelectedGridSize] = useState<number>(15);
   const [isResizing, setIsResizing] = useState(false);
+  const [isShuffling, setIsShuffling] = useState(false);
+
+  // Edit Contribution Modal State
+  const [editingItem, setEditingItem] = useState<{
+    id: string;
+    displayName: string;
+    message: string;
+    pieceNumber?: number;
+    imageUrl?: string;
+    thumbnailUrl?: string;
+  } | null>(null);
+  const [isSavingEdit, setIsSavingEdit] = useState(false);
 
   // Helper to calculate exact circle cells for any grid size (matching server math)
   const calculateCirclePiecesCount = (size: number): number => {
@@ -430,7 +445,7 @@ export const AdminPage: React.FC = () => {
     const actionText = addedDiff > 0 ? 'MỞ RỘNG' : addedDiff < 0 ? 'THU GỌN' : 'CẬP NHẬT';
 
     const confirmed = confirm(
-      `🌕 XÁC NHẬN ${actionText} VẦNG TRĂNG:\n\n• Quy mô hiện tại: ${moonOverview?.totalRows || 13}x${moonOverview?.totalCols || 13} (${currPieces} mảnh)\n• Quy mô mới: ${selectedGridSize}x${selectedGridSize} (${targetPieces} mảnh)\n• Thay đổi số lượng: ${addedDiff > 0 ? `+${addedDiff}` : addedDiff} mảnh\n• Dữ liệu bài nộp cũ: BẢO LƯU 100% (${allContributions.length} bài nộp)\n\nBạn có chắc chắn muốn áp dụng?`
+      `🌕 XÁC NHẬN ${actionText} VẦNG TRĂNG:\n\n• Quy mô hiện tại: ${moonOverview?.totalRows || 13}x${moonOverview?.totalCols || 13} (${currPieces} mảnh)\n• Quy mô mới: ${selectedGridSize}x${selectedGridSize} (${targetPieces} mảnh)\n• Thay đổi số lượng: ${addedDiff > 0 ? `+${addedDiff}` : addedDiff} mảnh\n• Dữ liệu bài nộp: BẢO TOÀN 100% (${allContributions.length} bài nộp được phân bố ngẫu nhiên)\n\nBạn có chắc chắn muốn áp dụng?`
     );
     if (!confirmed) return;
 
@@ -443,6 +458,26 @@ export const AdminPage: React.FC = () => {
       alert('Lỗi điều chỉnh quy mô: ' + err.message);
     } finally {
       setIsResizing(false);
+    }
+  };
+
+  // Shuffle pieces
+  const handleShufflePieces = async () => {
+    const confirmed = confirm(
+      `🎲 XÁC NHẬN XÁO TRỘN VỊ TRÍ:\n\nBạn có muốn xáo trộn ngẫu nhiên vị trí của ${allContributions.length} bài nộp trên vầng trăng không?\n(Dữ liệu tranh vẽ, tên và lời chúc của mọi người được bảo toàn 100%)`
+    );
+    if (!confirmed) return;
+
+    try {
+      setIsShuffling(true);
+      const res = await api.adminShufflePieces();
+      setActionMsg(res.message);
+      setTimeout(() => setActionMsg(null), 3500);
+      loadData();
+    } catch (err: any) {
+      alert('Lỗi xáo trộn vị trí: ' + err.message);
+    } finally {
+      setIsShuffling(false);
     }
   };
 
@@ -488,6 +523,26 @@ export const AdminPage: React.FC = () => {
       loadData();
     } catch (err: any) {
       alert('Lỗi xóa bài: ' + err.message);
+    }
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingItem) return;
+    try {
+      setIsSavingEdit(true);
+      await api.adminUpdateContribution(
+        editingItem.id,
+        editingItem.displayName,
+        editingItem.message
+      );
+      setActionMsg(`Đã cập nhật bài nộp của "${editingItem.displayName}" thành công!`);
+      setTimeout(() => setActionMsg(null), 3000);
+      setEditingItem(null);
+      loadData();
+    } catch (err: any) {
+      alert('Lỗi cập nhật bài nộp: ' + err.message);
+    } finally {
+      setIsSavingEdit(false);
     }
   };
 
@@ -821,6 +876,23 @@ export const AdminPage: React.FC = () => {
                     <div className="flex items-center gap-1">
                       <button
                         onClick={() =>
+                          setEditingItem({
+                            id: c.id,
+                            displayName: c.displayName,
+                            message: c.message || '',
+                            pieceNumber: c.piece?.pieceNumber,
+                            imageUrl: c.imageUrl,
+                            thumbnailUrl: c.thumbnailUrl,
+                          })
+                        }
+                        className="p-1.5 rounded-lg text-yellow-300 hover:bg-yellow-400/20 transition-colors"
+                        title="Chỉnh sửa tên và lời chúc"
+                      >
+                        <Edit3 className="w-4 h-4" />
+                      </button>
+
+                      <button
+                        onClick={() =>
                           handleModerate(
                             c.id,
                             c.status === 'APPROVED' ? 'REJECTED' : 'APPROVED'
@@ -856,9 +928,20 @@ export const AdminPage: React.FC = () => {
       {activeTab === 'pieces' && (
         <div className="glass-panel rounded-3xl p-6 border border-white/10 space-y-4">
           <div className="flex items-center justify-between gap-3 flex-wrap">
-            <h2 className="font-bold text-sm text-yellow-300">
-              Danh sách chi tiết các mảnh trăng
-            </h2>
+            <div className="flex items-center gap-3">
+              <h2 className="font-bold text-sm text-yellow-300">
+                Danh sách chi tiết các mảnh trăng
+              </h2>
+              <button
+                onClick={handleShufflePieces}
+                disabled={isShuffling}
+                className="px-3 py-1.5 rounded-xl bg-purple-500/20 text-purple-300 hover:bg-purple-500 hover:text-white border border-purple-400/30 text-xs font-semibold inline-flex items-center gap-1.5 transition-all shadow-sm disabled:opacity-50"
+                title="Xáo trộn ngẫu nhiên vị trí các bài nộp trên vầng trăng mà không làm mất dữ liệu"
+              >
+                <Shuffle className={`w-3.5 h-3.5 ${isShuffling ? 'animate-spin' : ''}`} />
+                <span>{isShuffling ? 'Đang xáo trộn...' : 'Xáo trộn ngẫu nhiên'}</span>
+              </button>
+            </div>
             <div className="flex items-center gap-2">
               {[
                 { id: '', label: 'Tất cả' },
@@ -966,21 +1049,41 @@ export const AdminPage: React.FC = () => {
                         )}
 
                         {p.contribution && (
-                          <button
-                            onClick={() =>
-                              handleModerate(
-                                p.contribution.id,
-                                p.contribution.status === 'APPROVED' ? 'REJECTED' : 'APPROVED'
-                              )
-                            }
-                            className={`px-2.5 py-1 rounded-lg font-semibold ${
-                              p.contribution.status === 'APPROVED'
-                                ? 'bg-rose-500/20 text-rose-300 hover:bg-rose-500/30'
-                                : 'bg-emerald-500/20 text-emerald-300 hover:bg-emerald-500/30'
-                            }`}
-                          >
-                            {p.contribution.status === 'APPROVED' ? 'Ẩn' : 'Duyệt'}
-                          </button>
+                          <>
+                            <button
+                              onClick={() =>
+                                setEditingItem({
+                                  id: p.contribution!.id,
+                                  displayName: p.contribution!.displayName,
+                                  message: p.contribution!.message || '',
+                                  pieceNumber: p.pieceNumber,
+                                  imageUrl: p.contribution!.imageUrl,
+                                  thumbnailUrl: p.contribution!.thumbnailUrl,
+                                })
+                              }
+                              className="px-2 py-1 rounded-lg bg-yellow-400/20 text-yellow-300 hover:bg-yellow-400 hover:text-night-950 font-semibold inline-flex items-center gap-1 transition-colors"
+                              title="Chỉnh sửa tên và lời chúc"
+                            >
+                              <Edit3 className="w-3.5 h-3.5" />
+                              <span>Sửa</span>
+                            </button>
+
+                            <button
+                              onClick={() =>
+                                handleModerate(
+                                  p.contribution!.id,
+                                  p.contribution!.status === 'APPROVED' ? 'REJECTED' : 'APPROVED'
+                                )
+                              }
+                              className={`px-2.5 py-1 rounded-lg font-semibold ${
+                                p.contribution.status === 'APPROVED'
+                                  ? 'bg-rose-500/20 text-rose-300 hover:bg-rose-500/30'
+                                  : 'bg-emerald-500/20 text-emerald-300 hover:bg-emerald-500/30'
+                              }`}
+                            >
+                              {p.contribution.status === 'APPROVED' ? 'Ẩn' : 'Duyệt'}
+                            </button>
+                          </>
                         )}
                       </td>
                     </tr>
@@ -1387,6 +1490,113 @@ export const AdminPage: React.FC = () => {
                   {inspectItem.status === 'APPROVED' ? 'Ẩn tác phẩm' : 'Duyệt tác phẩm'}
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* EDIT CONTRIBUTION MODAL */}
+      {editingItem && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-night-950/85 backdrop-blur-md animate-fadeIn">
+          <div className="glass-panel w-full max-w-xl rounded-3xl p-6 border border-yellow-400/40 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between border-b border-white/10 pb-3">
+              <div className="flex items-center gap-2">
+                <Edit3 className="w-4 h-4 text-yellow-300" />
+                <span className="text-sm font-bold text-yellow-300">
+                  Chỉnh Sửa Bài Nộp {editingItem.pieceNumber ? `(Mảnh #${editingItem.pieceNumber})` : ''}
+                </span>
+              </div>
+              <button
+                onClick={() => setEditingItem(null)}
+                className="p-1.5 rounded-xl text-slate-400 hover:text-white hover:bg-white/10"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-12 gap-4">
+              {/* Artwork Image Preview */}
+              {(editingItem.imageUrl || editingItem.thumbnailUrl) && (
+                <div className="sm:col-span-5 flex flex-col">
+                  <span className="text-slate-300 font-semibold text-xs mb-1.5">Ảnh tranh vẽ:</span>
+                  <div className="relative group w-full aspect-square rounded-2xl overflow-hidden border border-white/20 bg-night-950/80 shadow-inner flex items-center justify-center">
+                    <img
+                      src={editingItem.imageUrl || editingItem.thumbnailUrl}
+                      alt={editingItem.displayName}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                    />
+                    <a
+                      href={editingItem.imageUrl || editingItem.thumbnailUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="absolute inset-0 bg-night-950/60 opacity-0 group-hover:opacity-100 flex items-center justify-center gap-1.5 text-xs text-yellow-300 font-semibold transition-opacity"
+                    >
+                      <ExternalLink className="w-4 h-4" />
+                      <span>Xem ảnh lớn</span>
+                    </a>
+                  </div>
+                </div>
+              )}
+
+              {/* Form Inputs */}
+              <div className={`space-y-3 text-xs ${(editingItem.imageUrl || editingItem.thumbnailUrl) ? 'sm:col-span-7' : 'sm:col-span-12'}`}>
+                <div>
+                  <label className="block text-slate-300 font-semibold mb-1">
+                    Tên người gửi / Em nhỏ:
+                  </label>
+                  <input
+                    type="text"
+                    value={editingItem.displayName}
+                    onChange={(e) =>
+                      setEditingItem({ ...editingItem, displayName: e.target.value })
+                    }
+                    placeholder="Nhập tên người gửi..."
+                    className="w-full px-3 py-2.5 rounded-xl bg-night-950 border border-white/20 text-white focus:outline-none focus:border-yellow-400"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-slate-300 font-semibold mb-1">
+                    Lời chúc / Lời nhắn:
+                  </label>
+                  <textarea
+                    rows={4}
+                    value={editingItem.message}
+                    onChange={(e) =>
+                      setEditingItem({ ...editingItem, message: e.target.value })
+                    }
+                    placeholder="Nhập lời chúc..."
+                    className="w-full px-3 py-2.5 rounded-xl bg-night-950 border border-white/20 text-white focus:outline-none focus:border-yellow-400 resize-none"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-3 border-t border-white/10">
+              <button
+                type="button"
+                onClick={() => setEditingItem(null)}
+                className="px-4 py-2 rounded-xl glass-panel text-slate-300 hover:text-white text-xs font-semibold"
+              >
+                Hủy
+              </button>
+              <button
+                type="button"
+                onClick={handleSaveEdit}
+                disabled={isSavingEdit}
+                className="px-5 py-2 rounded-xl bg-yellow-400 text-night-950 font-bold text-xs hover:brightness-110 shadow-md flex items-center gap-1.5 disabled:opacity-50"
+              >
+                {isSavingEdit ? (
+                  <>
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                    <span>Đang lưu...</span>
+                  </>
+                ) : (
+                  <>
+                    <Check className="w-3.5 h-3.5" />
+                    <span>Lưu thay đổi</span>
+                  </>
+                )}
+              </button>
             </div>
           </div>
         </div>

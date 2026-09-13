@@ -8,8 +8,10 @@ router.get('/pieces', AdminController.getPieces);
 router.get('/all-contributions', AdminController.getAllContributions);
 router.post('/unlock/:id', AdminController.forceUnlockPiece);
 router.post('/moderate/:contributionId', AdminController.moderateContribution);
+router.put('/contribution/:id', AdminController.updateContribution);
 router.delete('/contribution/:id', AdminController.deleteContribution);
 router.post('/reset-empty', AdminController.resetToEmpty);
 router.post('/resize-moon', AdminController.resizeMoon);
+router.post('/shuffle-pieces', AdminController.shuffleMoonPieces);
 
 export default router;

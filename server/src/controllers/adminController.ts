@@ -186,6 +186,7 @@ export class AdminController {
   /**
    * POST /api/admin/resize-moon
    * Expand/resize moon grid (e.g. 13, 15, 17, 19, 21, 25) while preserving all completed contributions
+   * and scattering them randomly across the moon circle
    */
   static async resizeMoon(req: Request, res: Response) {
     try {
@@ -215,15 +216,33 @@ export class AdminController {
         orderBy: { createdAt: 'asc' },
       });
 
-      // 2. Clear old contributions and pieces for this moon
+      // 2. Pre-calculate valid pieces count for new grid to prevent any data loss
+      const center = (size - 1) / 2;
+      const radius = (size - 1) / 2;
+      let validCount = 0;
+      for (let r = 0; r < size; r++) {
+        for (let c = 0; c < size; c++) {
+          if (Math.hypot(r - center, c - center) <= radius + 0.1) {
+            validCount++;
+          }
+        }
+      }
+
+      // Safety check: ensure no contribution is lost
+      if (validCount < existingContributions.length) {
+        return res.status(400).json({
+          success: false,
+          message: `⚠️ Lưới ${size}x${size} chỉ có ${validCount} ô hợp lệ, nhưng hiện đang có ${existingContributions.length} bài nộp. Vui lòng chọn kích thước lớn hơn để đảm bảo không làm mất dữ liệu!`,
+        });
+      }
+
+      // 3. Clear old contributions and pieces for this moon
       await prisma.contribution.deleteMany();
       await prisma.moonPiece.deleteMany({
         where: { moonId: moon.id },
       });
 
-      // 3. Generate new grid
-      const center = (size - 1) / 2;
-      const radius = (size - 1) / 2;
+      // 4. Generate new grid
       const newPiecesData: Array<{
         moonId: string;
         row: number;
@@ -234,14 +253,9 @@ export class AdminController {
       }> = [];
 
       let pieceNum = 1;
-      let validCount = 0;
-
       for (let r = 0; r < size; r++) {
         for (let c = 0; c < size; c++) {
           const isWithin = Math.hypot(r - center, c - center) <= radius + 0.1;
-
-          if (isWithin) validCount++;
-
           newPiecesData.push({
             moonId: moon.id,
             row: r,
@@ -258,19 +272,24 @@ export class AdminController {
         data: newPiecesData,
       });
 
-      // 4. Recreate and rebind all contributions to the new valid pieces
+      // 5. Recreate and rebind all contributions to the new valid pieces scattered randomly
       const validPieces = await prisma.moonPiece.findMany({
         where: { moonId: moon.id, isWithinMoon: true },
-        orderBy: { pieceNumber: 'asc' },
-        take: existingContributions.length,
       });
 
+      // Fisher-Yates shuffle to randomize piece assignment
+      const shuffledPieces = [...validPieces];
+      for (let i = shuffledPieces.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [shuffledPieces[i], shuffledPieces[j]] = [shuffledPieces[j], shuffledPieces[i]];
+      }
+
       for (let i = 0; i < existingContributions.length; i++) {
-        if (validPieces[i]) {
+        if (shuffledPieces[i]) {
           const old = existingContributions[i];
           await prisma.contribution.create({
             data: {
-              pieceId: validPieces[i].id,
+              pieceId: shuffledPieces[i].id,
               sessionId: old.sessionId,
               displayName: old.displayName,
               message: old.message,
@@ -282,7 +301,7 @@ export class AdminController {
             },
           });
           await prisma.moonPiece.update({
-            where: { id: validPieces[i].id },
+            where: { id: shuffledPieces[i].id },
             data: { status: 'COMPLETED' },
           });
         }
@@ -303,7 +322,7 @@ export class AdminController {
 
       return res.json({
         success: true,
-        message: `🌕 Đã cập nhật quy mô vầng trăng sang lưới ${size}x${size} (${validCount} mảnh tròn). Toàn bộ ${existingContributions.length} bài nộp trước đó đã được giữ nguyên vẹn!`,
+        message: `🌕 Đã đổi sang lưới ${size}x${size} (${validCount} mảnh trăng tròn). Toàn bộ ${existingContributions.length} bài nộp đã được phân bố ngẫu nhiên và bảo toàn 100% dữ liệu!`,
         data: {
           totalRows: size,
           totalCols: size,
@@ -315,6 +334,115 @@ export class AdminController {
     } catch (error: any) {
       console.error('Lỗi resize vầng trăng:', error);
       return res.status(500).json({ success: false, message: 'Lỗi server khi mở rộng vầng trăng' });
+    }
+  }
+
+  /**
+   * POST /api/admin/shuffle-pieces
+   * Randomize / shuffle positions of all existing contributions across available moon pieces
+   */
+  static async shuffleMoonPieces(req: Request, res: Response) {
+    try {
+      const moon = await prisma.moon.findFirst();
+      if (!moon) {
+        return res.status(404).json({ success: false, message: 'Không tìm thấy vầng trăng' });
+      }
+
+      const existingContributions = await prisma.contribution.findMany({
+        orderBy: { createdAt: 'asc' },
+      });
+
+      if (existingContributions.length === 0) {
+        return res.json({ success: true, message: 'Chưa có bài nộp nào để xáo trộn' });
+      }
+
+      const validPieces = await prisma.moonPiece.findMany({
+        where: { moonId: moon.id, isWithinMoon: true },
+      });
+
+      if (validPieces.length < existingContributions.length) {
+        return res.status(400).json({ success: false, message: 'Số ô hợp lệ không đủ' });
+      }
+
+      // Fisher-Yates shuffle
+      const shuffledPieces = [...validPieces];
+      for (let i = shuffledPieces.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [shuffledPieces[i], shuffledPieces[j]] = [shuffledPieces[j], shuffledPieces[i]];
+      }
+
+      // Recreate contributions to avoid pieceId unique collision
+      await prisma.contribution.deleteMany();
+      await prisma.moonPiece.updateMany({
+        where: { moonId: moon.id },
+        data: { status: 'AVAILABLE', lockedBy: null, lockedUntil: null },
+      });
+
+      for (let i = 0; i < existingContributions.length; i++) {
+        const old = existingContributions[i];
+        const piece = shuffledPieces[i];
+        await prisma.contribution.create({
+          data: {
+            pieceId: piece.id,
+            sessionId: old.sessionId,
+            displayName: old.displayName,
+            message: old.message,
+            imageUrl: old.imageUrl,
+            thumbnailUrl: old.thumbnailUrl,
+            status: old.status,
+            moderationNote: old.moderationNote,
+            createdAt: old.createdAt,
+          },
+        });
+        await prisma.moonPiece.update({
+          where: { id: piece.id },
+          data: { status: 'COMPLETED' },
+        });
+      }
+
+      // Update moon completed count
+      await prisma.moon.update({
+        where: { id: moon.id },
+        data: {
+          completedPieces: existingContributions.length,
+          status: existingContributions.length >= validPieces.length ? 'COMPLETED' : 'ACTIVE',
+        },
+      });
+
+      return res.json({
+        success: true,
+        message: `🎲 Đã xáo trộn ngẫu nhiên vị trí của ${existingContributions.length} bài nộp thành công!`,
+      });
+    } catch (error: any) {
+      console.error('Lỗi xáo trộn vị trí:', error);
+      return res.status(500).json({ success: false, message: 'Lỗi server khi xáo trộn vị trí' });
+    }
+  }
+
+  /**
+   * PUT /api/admin/contribution/:id
+   */
+  static async updateContribution(req: Request, res: Response) {
+    try {
+      const { id } = req.params;
+      const { displayName, message } = req.body;
+
+      const contribution = await prisma.contribution.update({
+        where: { id },
+        data: {
+          displayName: displayName?.trim() || 'Người bạn nhỏ',
+          message: message?.trim() || '',
+        },
+      });
+
+      return res.json({
+        success: true,
+        message: 'Đã cập nhật thông tin bài nộp thành công!',
+        data: contribution,
+      });
+    } catch (error: any) {
+      console.error('Lỗi cập nhật đóng góp:', error);
+      return res.status(500).json({ success: false, message: 'Lỗi server khi cập nhật bài nộp' });
     }
   }
 
