@@ -74,6 +74,108 @@ export interface CanvasStickerItem {
   size: number; // in px
 }
 
+interface VisualFontSelectProps {
+  value: string;
+  onChange: (family: string) => void;
+  isOpen: boolean;
+  setIsOpen: (open: boolean) => void;
+  label?: string;
+  previewText?: string;
+}
+
+const VisualFontSelect: React.FC<VisualFontSelectProps> = ({
+  value,
+  onChange,
+  isOpen,
+  setIsOpen,
+  label = 'Kiểu chữ:',
+  previewText,
+}) => {
+  const currentFont = FONT_OPTIONS.find((f) => f.family === value) || FONT_OPTIONS[0];
+
+  return (
+    <div className="space-y-1 relative">
+      <div className="flex justify-between text-[11px] text-slate-300">
+        <span>{label}</span>
+        <span className="text-yellow-300 font-semibold text-[10px]">
+          {currentFont.name}
+        </span>
+      </div>
+
+      <button
+        type="button"
+        onClick={() => setIsOpen(!isOpen)}
+        className="w-full px-3 py-2 rounded-xl bg-night-950 border border-white/20 hover:border-yellow-400/50 text-left flex items-center justify-between transition-all group shadow-sm"
+      >
+        <div className="flex items-center gap-2 min-w-0">
+          <span
+            style={{ fontFamily: currentFont.family }}
+            className="text-yellow-300 text-sm font-bold truncate"
+          >
+            {currentFont.name}
+          </span>
+          <span
+            style={{ fontFamily: currentFont.family }}
+            className="text-slate-400 text-xs truncate hidden sm:inline"
+          >
+            — {previewText && previewText.trim() ? previewText : currentFont.sample}
+          </span>
+        </div>
+        <ChevronDown
+          className={`w-4 h-4 text-yellow-400 transition-transform flex-shrink-0 ${
+            isOpen ? 'rotate-180' : ''
+          }`}
+        />
+      </button>
+
+      {/* Floating Visual Font List with actual rendered shapes */}
+      {isOpen && (
+        <>
+          <div
+            className="fixed inset-0 z-30"
+            onClick={() => setIsOpen(false)}
+          />
+          <div className="absolute top-full left-0 right-0 mt-1 z-40 p-2 rounded-2xl glass-panel bg-night-950/95 border border-yellow-400/40 shadow-2xl space-y-1 max-h-[240px] overflow-y-auto backdrop-blur-xl animate-fadeIn">
+            {FONT_OPTIONS.map((f) => {
+              const isSelected = value === f.family;
+              return (
+                <button
+                  key={f.id}
+                  type="button"
+                  onClick={() => {
+                    onChange(f.family);
+                    setIsOpen(false);
+                  }}
+                  className={`w-full p-2 rounded-xl text-left flex items-center justify-between transition-all border ${
+                    isSelected
+                      ? 'bg-yellow-400/20 border-yellow-400/60 text-yellow-300 shadow-md'
+                      : 'bg-white/5 border-transparent hover:bg-white/10 text-slate-200 hover:border-yellow-400/30'
+                  }`}
+                >
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[10px] text-slate-400 font-sans font-medium">
+                      {f.name}
+                    </p>
+                    <p
+                      style={{ fontFamily: f.family }}
+                      className="text-sm font-bold text-yellow-200 truncate mt-0.5"
+                    >
+                      {previewText && previewText.trim() ? previewText : f.sample}
+                    </p>
+                  </div>
+                  {isSelected && (
+                    <Check className="w-4 h-4 text-yellow-400 flex-shrink-0 ml-2" />
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </>
+      )}
+    </div>
+  );
+};
+
 export const CreativeEditor: React.FC<CreativeEditorProps> = ({
   piece,
   onPreview,
@@ -152,12 +254,13 @@ export const CreativeEditor: React.FC<CreativeEditorProps> = ({
   ]);
   const [selectedTextId, setSelectedTextId] = useState<string | null>(null);
 
-  // Draft state for creating new text before adding to canvas
-  const [draftText, setDraftText] = useState('Vui hội trăng rằm! 🏮');
-  const [draftFont, setDraftFont] = useState('"Quicksand", sans-serif');
-  const [draftColor, setDraftColor] = useState('#fef08a');
-  const [draftSize, setDraftSize] = useState(24);
-  const [isFontDropdownOpen, setIsFontDropdownOpen] = useState(false);
+  // State for creating new text
+  const [textInput, setTextInput] = useState('');
+  const [newTextFont, setNewTextFont] = useState('"Quicksand", sans-serif');
+  const [newTextColor, setNewTextColor] = useState('#fef08a');
+  const [newTextSize, setNewTextSize] = useState(24);
+  const [isNewFontDropdownOpen, setIsNewFontDropdownOpen] = useState(false);
+  const [isEditFontDropdownOpen, setIsEditFontDropdownOpen] = useState(false);
 
   // Dragging state for both text and stickers
   const draggingItemRef = useRef<{
@@ -469,70 +572,8 @@ export const CreativeEditor: React.FC<CreativeEditorProps> = ({
     }
   };
 
-  // Unified Text helpers (works seamlessly for editing selected text or drafting new text)
+  // Selected Text item helper
   const selectedText = textItems.find((t) => t.id === selectedTextId);
-
-  const activeTextContent = selectedText ? selectedText.text : draftText;
-  const activeFontFamily = selectedText ? (selectedText.fontFamily || '"Quicksand", sans-serif') : draftFont;
-  const activeTextColor = selectedText ? selectedText.color : draftColor;
-  const activeTextSize = selectedText ? selectedText.fontSize : draftSize;
-
-  const handleTextContentChange = (val: string) => {
-    if (selectedTextId) {
-      handleUpdateSelectedText({ text: val });
-    } else {
-      setDraftText(val);
-    }
-  };
-
-  const handleFontFamilyChange = (fam: string) => {
-    if (selectedTextId) {
-      handleUpdateSelectedText({ fontFamily: fam });
-    } else {
-      setDraftFont(fam);
-    }
-    setIsFontDropdownOpen(false);
-  };
-
-  const handleColorChange = (col: string) => {
-    if (selectedTextId) {
-      handleUpdateSelectedText({ color: col });
-    } else {
-      setDraftColor(col);
-    }
-  };
-
-  const handleSizeChange = (sz: number) => {
-    if (selectedTextId) {
-      handleUpdateSelectedText({ fontSize: sz });
-    } else {
-      setDraftSize(sz);
-    }
-  };
-
-  // Add New Draggable Text Item from current draft
-  const handleAddNewTextFromDraft = () => {
-    const content = draftText.trim() || 'Trung Thu viên mãn! ✨';
-    const newId = 'text_' + Date.now();
-    const newItem: DraggableText = {
-      id: newId,
-      text: content,
-      x: 300,
-      y: 250 + (textItems.length * 40) % 200,
-      color: draftColor,
-      fontSize: draftSize,
-      fontFamily: draftFont,
-    };
-    setTextItems((prev) => [...prev, newItem]);
-    setSelectedTextId(newId);
-    setSelectedStickerId(null);
-  };
-
-  const handleStartNewTextDraft = () => {
-    setSelectedTextId(null);
-    setSelectedStickerId(null);
-    setDraftText('Trung Thu vui vẻ! ✨');
-  };
 
   // Update existing selected text item
   const handleUpdateSelectedText = (updates: Partial<DraggableText>) => {
@@ -548,6 +589,25 @@ export const CreativeEditor: React.FC<CreativeEditorProps> = ({
     if (selectedTextId === id) {
       setSelectedTextId(null);
     }
+  };
+
+  // Add New Draggable Text Item
+  const handleAddDraggableText = () => {
+    const content = textInput.trim() || 'Chúc bạn Trung Thu vui vẻ! 🏮';
+    const newId = 'text_' + Date.now();
+    const newItem: DraggableText = {
+      id: newId,
+      text: content,
+      x: 300,
+      y: 250 + (textItems.length * 40) % 200,
+      color: newTextColor,
+      fontSize: newTextSize,
+      fontFamily: newTextFont,
+    };
+    setTextItems((prev) => [...prev, newItem]);
+    setSelectedTextId(newId);
+    setSelectedStickerId(null);
+    setTextInput('');
   };
 
   // Generic Item Pointer Down Handler (for sticker or text)
@@ -1210,209 +1270,224 @@ export const CreativeEditor: React.FC<CreativeEditorProps> = ({
             </div>
           )}
 
-          {/* Tab 3: Text (Unified Visual Creator & Editor) */}
+          {/* Tab 3: Text */}
           {activeTab === 'text' && (
-            <div className="space-y-3 animate-fadeIn text-left">
-              {/* Header Status */}
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-1.5">
-                  <Type className="w-4 h-4 text-yellow-400" />
-                  <span className="text-xs font-bold text-yellow-300">
-                    {selectedText ? 'Đang chỉnh sửa dòng chữ' : 'Soạn dòng chữ mới'}
-                  </span>
-                </div>
-                {selectedText ? (
-                  <div className="flex items-center gap-1.5">
-                    <button
-                      type="button"
-                      onClick={handleStartNewTextDraft}
-                      className="px-2 py-1 rounded-lg bg-yellow-400/10 hover:bg-yellow-400/20 text-yellow-300 text-[11px] font-bold flex items-center gap-1 border border-yellow-400/30"
-                      title="Soạn thêm một dòng chữ mới"
-                    >
-                      <Plus className="w-3 h-3" />
-                      <span>Thêm chữ mới</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleDeleteSelectedText(selectedText.id)}
-                      className="p-1 rounded-lg text-rose-400 hover:bg-rose-500/20 text-xs font-semibold"
-                      title="Xóa dòng chữ này"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
+            <div className="space-y-4 animate-fadeIn text-left">
+              {/* If a text item is selected on canvas, show Edit Card */}
+              {selectedText ? (
+                <div className="p-3 rounded-2xl bg-white/5 border border-yellow-400/40 space-y-3 shadow-lg">
+                  <div className="flex items-center justify-between pb-1 border-b border-white/10">
+                    <div className="flex items-center gap-1.5">
+                      <Type className="w-3.5 h-3.5 text-yellow-400" />
+                      <span className="text-xs font-bold text-yellow-300">
+                        Chỉnh sửa chữ đang chọn
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <button
+                        type="button"
+                        onClick={() => setSelectedTextId(null)}
+                        className="px-2 py-0.5 rounded-lg bg-white/10 hover:bg-white/20 text-slate-300 text-[10px]"
+                        title="Bỏ chọn"
+                      >
+                        Bỏ chọn
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteSelectedText(selectedText.id)}
+                        className="p-1 rounded-lg text-rose-400 hover:bg-rose-500/20 text-xs font-semibold"
+                        title="Xóa chữ này"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
                   </div>
-                ) : (
-                  <span className="text-[10px] text-slate-400">
-                    Chỉnh kiểu chữ & màu trước khi thêm
-                  </span>
-                )}
-              </div>
 
-              {/* Text Input with Real-time Style Preview */}
-              <div className="space-y-1">
+                  {/* Edit Content */}
+                  <div className="space-y-1">
+                    <input
+                      type="text"
+                      maxLength={45}
+                      value={selectedText.text}
+                      onChange={(e) => handleUpdateSelectedText({ text: e.target.value })}
+                      style={{
+                        fontFamily: selectedText.fontFamily || '"Quicksand", sans-serif',
+                        color: selectedText.color,
+                      }}
+                      className="w-full px-3 py-2 rounded-xl bg-night-950 border border-white/20 text-xs font-bold focus:outline-none focus:border-yellow-400"
+                    />
+                  </div>
+
+                  {/* Font dropdown for selected text */}
+                  <VisualFontSelect
+                    value={selectedText.fontFamily || '"Quicksand", sans-serif'}
+                    onChange={(family) => handleUpdateSelectedText({ fontFamily: family })}
+                    isOpen={isEditFontDropdownOpen}
+                    setIsOpen={setIsEditFontDropdownOpen}
+                    label="Kiểu chữ:"
+                    previewText={selectedText.text}
+                  />
+
+                  {/* Size slider */}
+                  <div className="space-y-1">
+                    <div className="flex justify-between text-[11px] text-slate-300">
+                      <span>Cỡ chữ:</span>
+                      <span className="text-yellow-300 font-bold">{selectedText.fontSize}px</span>
+                    </div>
+                    <input
+                      type="range"
+                      min="14"
+                      max="48"
+                      value={selectedText.fontSize}
+                      onChange={(e) =>
+                        handleUpdateSelectedText({ fontSize: parseInt(e.target.value) })
+                      }
+                      className="w-full accent-yellow-400 cursor-pointer"
+                    />
+                  </div>
+
+                  {/* Color selector */}
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between text-[11px] text-slate-300">
+                      <span>Màu sắc:</span>
+                      <span className="font-mono text-[10px] text-slate-400 uppercase">
+                        {selectedText.color}
+                      </span>
+                    </div>
+                    <div className="flex items-center flex-wrap gap-1.5">
+                      {PRESET_COLORS.map((c) => (
+                        <button
+                          key={c}
+                          type="button"
+                          onClick={() => handleUpdateSelectedText({ color: c })}
+                          style={{ backgroundColor: c }}
+                          className={`w-6 h-6 rounded-full border-2 transition-transform ${
+                            selectedText.color.toLowerCase() === c.toLowerCase()
+                              ? 'border-white scale-125 shadow-md ring-2 ring-yellow-400/60 z-10'
+                              : 'border-white/20 hover:scale-110'
+                          }`}
+                          title={c}
+                        />
+                      ))}
+                      <label
+                        className="relative w-6 h-6 rounded-full cursor-pointer flex items-center justify-center border-2 border-white/60 shadow-md hover:scale-125 transition-transform overflow-hidden flex-shrink-0"
+                        style={{
+                          background:
+                            'conic-gradient(red, yellow, lime, aqua, blue, magenta, red)',
+                        }}
+                        title="Bấm để mở bảng màu tròn tùy chọn"
+                      >
+                        <input
+                          type="color"
+                          value={selectedText.color}
+                          onChange={(e) => handleUpdateSelectedText({ color: e.target.value })}
+                          className="opacity-0 absolute inset-0 w-full h-full cursor-pointer"
+                        />
+                      </label>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center py-2 text-xs text-slate-400 italic">
+                  Chạm vào chữ trên tranh để kéo thả di chuyển hoặc sửa nội dung.
+                </div>
+              )}
+
+              {/* Add New Text Form */}
+              <div className="pt-2 border-t border-white/10 space-y-3">
+                <span className="text-xs text-slate-300 font-semibold block">
+                  Thêm một dòng chữ mới:
+                </span>
+
                 <input
                   type="text"
                   maxLength={45}
-                  value={activeTextContent}
-                  onChange={(e) => handleTextContentChange(e.target.value)}
-                  placeholder="Nhập lời chúc hoặc thông điệp..."
+                  value={textInput}
+                  onChange={(e) => setTextInput(e.target.value)}
+                  placeholder="VD: Cầu chúc vạn sự an lành! 🏮"
                   style={{
-                    fontFamily: activeFontFamily,
-                    color: activeTextColor,
+                    fontFamily: newTextFont,
+                    color: newTextColor,
                   }}
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-night-950 border border-yellow-400/40 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-yellow-400/50 shadow-inner"
+                  className="w-full px-3 py-2 rounded-xl bg-night-950 border border-white/20 text-xs font-bold focus:outline-none focus:border-yellow-400 shadow-inner"
                 />
-              </div>
 
-              {/* Visual Font Style Selector Popover */}
-              <div className="space-y-1 relative">
-                <div className="flex justify-between text-[11px] text-slate-300">
-                  <span>Kiểu chữ:</span>
-                  <span className="text-yellow-300 font-semibold text-[10px]">
-                    {FONT_OPTIONS.find((f) => f.family === activeFontFamily)?.name}
-                  </span>
+                {/* Font Selector for new text with visual shapes preview */}
+                <VisualFontSelect
+                  value={newTextFont}
+                  onChange={setNewTextFont}
+                  isOpen={isNewFontDropdownOpen}
+                  setIsOpen={setIsNewFontDropdownOpen}
+                  label="Kiểu chữ:"
+                  previewText={textInput}
+                />
+
+                {/* Size slider for new text */}
+                <div className="space-y-1">
+                  <div className="flex justify-between text-[11px] text-slate-300">
+                    <span>Cỡ chữ:</span>
+                    <span className="text-yellow-300 font-bold">{newTextSize}px</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="14"
+                    max="48"
+                    value={newTextSize}
+                    onChange={(e) => setNewTextSize(parseInt(e.target.value))}
+                    className="w-full accent-yellow-400 cursor-pointer"
+                  />
+                </div>
+
+                {/* Color swatches + Rainbow Picker for new text */}
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between text-[11px] text-slate-300">
+                    <span>Màu sắc:</span>
+                    <span className="font-mono text-[10px] text-slate-400 uppercase">
+                      {newTextColor}
+                    </span>
+                  </div>
+                  <div className="flex items-center flex-wrap gap-1.5">
+                    {PRESET_COLORS.map((c) => (
+                      <button
+                        key={c}
+                        type="button"
+                        onClick={() => setNewTextColor(c)}
+                        style={{ backgroundColor: c }}
+                        className={`w-6 h-6 rounded-full border-2 transition-transform ${
+                          newTextColor.toLowerCase() === c.toLowerCase()
+                            ? 'border-white scale-125 shadow-md ring-2 ring-yellow-400/60 z-10'
+                            : 'border-white/20 hover:scale-110'
+                        }`}
+                        title={c}
+                      />
+                    ))}
+                    <label
+                      className="relative w-6 h-6 rounded-full cursor-pointer flex items-center justify-center border-2 border-white/60 shadow-md hover:scale-125 transition-transform overflow-hidden flex-shrink-0"
+                      style={{
+                        background:
+                          'conic-gradient(red, yellow, lime, aqua, blue, magenta, red)',
+                      }}
+                      title="Bấm để mở bảng màu tròn tùy chọn"
+                    >
+                      <input
+                        type="color"
+                        value={newTextColor}
+                        onChange={(e) => setNewTextColor(e.target.value)}
+                        className="opacity-0 absolute inset-0 w-full h-full cursor-pointer"
+                      />
+                    </label>
+                  </div>
                 </div>
 
                 <button
                   type="button"
-                  onClick={() => setIsFontDropdownOpen(!isFontDropdownOpen)}
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-night-950 border border-white/20 hover:border-yellow-400/50 text-left flex items-center justify-between transition-all group shadow-sm"
+                  onClick={handleAddDraggableText}
+                  className="w-full py-2.5 rounded-xl bg-yellow-400 text-night-950 font-bold text-xs hover:bg-yellow-300 transition-colors flex items-center justify-center gap-1.5 shadow-md active:scale-98"
                 >
-                  <div className="flex items-center gap-2 min-w-0">
-                    <span
-                      style={{ fontFamily: activeFontFamily }}
-                      className="text-yellow-300 text-sm font-bold truncate"
-                    >
-                      {FONT_OPTIONS.find((f) => f.family === activeFontFamily)?.name || 'Quicksand'}
-                    </span>
-                    <span
-                      style={{ fontFamily: activeFontFamily }}
-                      className="text-slate-400 text-xs truncate hidden sm:inline"
-                    >
-                      — {FONT_OPTIONS.find((f) => f.family === activeFontFamily)?.sample}
-                    </span>
-                  </div>
-                  <ChevronDown
-                    className={`w-4 h-4 text-yellow-400 transition-transform flex-shrink-0 ${
-                      isFontDropdownOpen ? 'rotate-180' : ''
-                    }`}
-                  />
+                  <Plus className="w-4 h-4" />
+                  <span>Thêm chữ có thể kéo thả</span>
                 </button>
-
-                {/* Floating Visual Font List with actual rendered shapes */}
-                {isFontDropdownOpen && (
-                  <>
-                    <div
-                      className="fixed inset-0 z-30"
-                      onClick={() => setIsFontDropdownOpen(false)}
-                    />
-                    <div className="absolute top-full left-0 right-0 mt-1.5 z-40 p-2 rounded-2xl glass-panel bg-night-950/95 border border-yellow-400/40 shadow-2xl space-y-1.5 max-h-[250px] overflow-y-auto backdrop-blur-xl animate-fadeIn">
-                      {FONT_OPTIONS.map((f) => {
-                        const isSelected = activeFontFamily === f.family;
-                        return (
-                          <button
-                            key={f.id}
-                            type="button"
-                            onClick={() => handleFontFamilyChange(f.family)}
-                            className={`w-full p-2.5 rounded-xl text-left flex items-center justify-between transition-all border ${
-                              isSelected
-                                ? 'bg-yellow-400/20 border-yellow-400/60 text-yellow-300 shadow-md'
-                                : 'bg-white/5 border-transparent hover:bg-white/10 text-slate-200 hover:border-yellow-400/30'
-                            }`}
-                          >
-                            <div className="min-w-0 flex-1">
-                              <p className="text-[11px] text-slate-400 font-sans font-medium">
-                                {f.name}
-                              </p>
-                              <p
-                                style={{ fontFamily: f.family }}
-                                className="text-sm font-bold text-yellow-200 truncate mt-0.5"
-                              >
-                                {f.sample}
-                              </p>
-                            </div>
-                            {isSelected && (
-                              <Check className="w-4 h-4 text-yellow-400 flex-shrink-0 ml-2" />
-                            )}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </>
-                )}
               </div>
-
-              {/* Font Size slider */}
-              <div className="space-y-1">
-                <div className="flex justify-between text-[11px] text-slate-300">
-                  <span>Cỡ chữ:</span>
-                  <span className="text-yellow-300 font-bold">{activeTextSize}px</span>
-                </div>
-                <input
-                  type="range"
-                  min="14"
-                  max="48"
-                  value={activeTextSize}
-                  onChange={(e) => handleSizeChange(parseInt(e.target.value))}
-                  className="w-full accent-yellow-400 cursor-pointer"
-                />
-              </div>
-
-              {/* Color selector & Circular Rainbow Wheel */}
-              <div className="space-y-1.5">
-                <div className="flex items-center justify-between text-[11px] text-slate-300">
-                  <span>Màu sắc chữ:</span>
-                  <span className="font-mono text-[10px] text-slate-400 uppercase">
-                    {activeTextColor}
-                  </span>
-                </div>
-                <div className="flex items-center flex-wrap gap-1.5">
-                  {PRESET_COLORS.map((c) => (
-                    <button
-                      key={c}
-                      type="button"
-                      onClick={() => handleColorChange(c)}
-                      style={{ backgroundColor: c }}
-                      className={`w-6 h-6 rounded-full border-2 transition-transform ${
-                        activeTextColor.toLowerCase() === c.toLowerCase()
-                          ? 'border-white scale-125 shadow-md shadow-black/50 z-10 ring-2 ring-yellow-400/60'
-                          : 'border-white/20 hover:scale-110'
-                      }`}
-                      title={c}
-                    />
-                  ))}
-
-                  {/* Circular Rainbow Color Wheel Picker */}
-                  <label
-                    className="relative w-6 h-6 rounded-full cursor-pointer flex items-center justify-center border-2 border-white/60 shadow-md hover:scale-125 transition-transform overflow-hidden flex-shrink-0"
-                    style={{
-                      background: 'conic-gradient(red, yellow, lime, aqua, blue, magenta, red)',
-                    }}
-                    title="Bấm để mở bảng màu tròn tùy chọn"
-                  >
-                    <input
-                      type="color"
-                      value={activeTextColor}
-                      onChange={(e) => handleColorChange(e.target.value)}
-                      className="opacity-0 absolute inset-0 w-full h-full cursor-pointer"
-                    />
-                  </label>
-                </div>
-              </div>
-
-              {/* Bottom Action for Draft */}
-              {!selectedText && (
-                <div className="pt-2">
-                  <button
-                    type="button"
-                    onClick={handleAddNewTextFromDraft}
-                    className="w-full py-2.5 rounded-xl bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-400 text-night-950 font-bold text-xs hover:brightness-110 transition-all flex items-center justify-center gap-1.5 shadow-lg shadow-yellow-400/25 active:scale-98"
-                  >
-                    <Plus className="w-4 h-4" />
-                    <span>Thêm chữ này lên tranh</span>
-                  </button>
-                </div>
-              )}
             </div>
           )}
 
