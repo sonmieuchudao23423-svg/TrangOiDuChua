@@ -152,7 +152,6 @@ export const CreativeEditor: React.FC<CreativeEditorProps> = ({
   const [textInput, setTextInput] = useState('');
   const [textColor, setTextColor] = useState('#ffffff');
   const [textSize, setTextSize] = useState(24);
-  const [textFontFamily, setTextFontFamily] = useState('"Quicksand", sans-serif');
 
   // Dragging state for both text and stickers
   const draggingItemRef = useRef<{
@@ -476,7 +475,7 @@ export const CreativeEditor: React.FC<CreativeEditorProps> = ({
       y: 250 + (textItems.length * 40) % 200,
       color: textColor,
       fontSize: textSize,
-      fontFamily: textFontFamily,
+      fontFamily: '"Quicksand", sans-serif',
     };
     setTextItems((prev) => [...prev, newItem]);
     setSelectedTextId(newId);
@@ -1205,32 +1204,33 @@ export const CreativeEditor: React.FC<CreativeEditorProps> = ({
                     />
                   </div>
 
-                  {/* Font Family selector */}
-                  <div className="space-y-1.5 pt-1">
+                  {/* Font Family selector (Compact Dropdown) */}
+                  <div className="space-y-1">
                     <div className="flex justify-between text-[11px] text-slate-300">
                       <span>Kiểu chữ:</span>
-                      <span className="text-yellow-300 font-semibold text-[10px]">
-                        {FONT_OPTIONS.find((f) => f.family === (selectedText.fontFamily || '"Quicksand", sans-serif'))?.name || 'Tròn trịa'}
-                      </span>
                     </div>
-                    <div className="grid grid-cols-2 gap-1.5">
-                      {FONT_OPTIONS.map((f) => {
-                        const isSelected = (selectedText.fontFamily || '"Quicksand", sans-serif') === f.family;
-                        return (
-                          <button
+                    <div className="relative">
+                      <select
+                        value={selectedText.fontFamily || '"Quicksand", sans-serif'}
+                        onChange={(e) => handleUpdateSelectedText({ fontFamily: e.target.value })}
+                        style={{ fontFamily: selectedText.fontFamily || '"Quicksand", sans-serif' }}
+                        className="w-full px-3 py-2 pr-8 rounded-xl bg-night-950 border border-white/20 text-yellow-300 text-xs font-semibold focus:outline-none focus:border-yellow-400 cursor-pointer appearance-none"
+                      >
+                        {FONT_OPTIONS.map((f) => (
+                          <option
                             key={f.id}
-                            onClick={() => handleUpdateSelectedText({ fontFamily: f.family })}
-                            style={{ fontFamily: f.family }}
-                            className={`px-2 py-1.5 rounded-xl border text-[11px] text-left truncate transition-all ${
-                              isSelected
-                                ? 'border-yellow-400 bg-yellow-400/20 text-yellow-300 font-bold shadow-sm'
-                                : 'border-white/10 bg-night-950/60 text-slate-300 hover:border-yellow-400/40'
-                            }`}
+                            value={f.family}
+                            style={{ fontFamily: f.family, backgroundColor: '#0a0e27', color: '#facc15' }}
                           >
                             {f.name}
-                          </button>
-                        );
-                      })}
+                          </option>
+                        ))}
+                      </select>
+                      <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2.5 text-yellow-400">
+                        <svg className="w-4 h-4 fill-current" viewBox="0 0 20 20">
+                          <path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" />
+                        </svg>
+                      </div>
                     </div>
                   </div>
 
@@ -1290,28 +1290,8 @@ export const CreativeEditor: React.FC<CreativeEditorProps> = ({
                   value={textInput}
                   onChange={(e) => setTextInput(e.target.value)}
                   placeholder="VD: Cầu chúc vạn sự an lành!"
-                  style={{ fontFamily: textFontFamily }}
                   className="w-full px-3 py-2 rounded-xl bg-night-950 border border-white/10 text-white text-xs focus:outline-none focus:border-yellow-400"
                 />
-
-                {/* Font selection for new text */}
-                <div className="grid grid-cols-3 gap-1">
-                  {FONT_OPTIONS.map((f) => (
-                    <button
-                      key={f.id}
-                      type="button"
-                      onClick={() => setTextFontFamily(f.family)}
-                      style={{ fontFamily: f.family }}
-                      className={`px-1.5 py-1 rounded-lg border text-[10px] truncate transition-all ${
-                        textFontFamily === f.family
-                          ? 'border-yellow-400 bg-yellow-400/20 text-yellow-300 font-bold'
-                          : 'border-white/10 bg-night-950/40 text-slate-400 hover:text-white'
-                      }`}
-                    >
-                      {f.name.split(' ')[0]}
-                    </button>
-                  ))}
-                </div>
 
                 <button
                   onClick={handleAddDraggableText}
