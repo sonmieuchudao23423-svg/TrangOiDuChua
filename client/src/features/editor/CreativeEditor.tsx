@@ -564,12 +564,6 @@ const ImageCropModal: React.FC<ImageCropModalProps> = ({
               <div className="border-r border-yellow-400/20" />
               <div />
             </div>
-
-            {/* Drag hint badge */}
-            <div className="absolute bottom-2 left-1/2 -translate-x-1/2 px-2.5 py-1 rounded-full bg-night-950/85 backdrop-blur-sm text-[10px] text-yellow-200 font-semibold border border-yellow-400/30 flex items-center gap-1.5 pointer-events-none opacity-90 group-hover:opacity-100 transition-opacity">
-              <Move className="w-3 h-3 text-yellow-400" />
-              <span>1 ngón để dời • 2 ngón để phóng to</span>
-            </div>
           </div>
         </div>
 
@@ -614,26 +608,23 @@ const ImageCropModal: React.FC<ImageCropModalProps> = ({
           </div>
 
           {/* Rotate & Reset Buttons */}
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={handleRotate}
-                className="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-slate-200 text-xs font-semibold flex items-center gap-1.5 transition-colors border border-white/10"
-              >
-                <RotateCw className="w-3.5 h-3.5 text-yellow-400" />
-                <span>Xoay {uiRotation !== 0 ? `${uiRotation}°` : '90°'}</span>
-              </button>
-              <button
-                type="button"
-                onClick={handleReset}
-                className="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-slate-300 text-xs font-semibold flex items-center gap-1.5 transition-colors border border-white/10"
-              >
-                <RotateCcw className="w-3.5 h-3.5" />
-                <span>Đặt lại</span>
-              </button>
-            </div>
-            <span className="text-[11px] text-slate-400 italic">Khung 1:1 chuẩn Trăng</span>
+          <div className="flex items-center justify-start gap-2">
+            <button
+              type="button"
+              onClick={handleRotate}
+              className="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-slate-200 text-xs font-semibold flex items-center gap-1.5 transition-colors border border-white/10"
+            >
+              <RotateCw className="w-3.5 h-3.5 text-yellow-400" />
+              <span>Xoay {uiRotation !== 0 ? `${uiRotation}°` : '90°'}</span>
+            </button>
+            <button
+              type="button"
+              onClick={handleReset}
+              className="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-slate-300 text-xs font-semibold flex items-center gap-1.5 transition-colors border border-white/10"
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+              <span>Đặt lại</span>
+            </button>
           </div>
         </div>
 
