@@ -817,7 +817,7 @@ export const AdminPage: React.FC = () => {
                       className="w-20 h-20 rounded-xl overflow-hidden bg-night-950/80 border border-white/10 cursor-pointer flex-shrink-0 relative group-hover:border-yellow-400 transition-colors"
                     >
                       <img
-                        src={c.thumbnailUrl || c.imageUrl}
+                        src={c.imageUrl || c.thumbnailUrl}
                         alt={c.displayName}
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform"
                       />
@@ -1003,9 +1003,9 @@ export const AdminPage: React.FC = () => {
                       <td className="p-3 font-semibold text-white">
                         {p.contribution ? (
                           <div className="flex items-center gap-2">
-                            {p.contribution.thumbnailUrl && (
+                            {(p.contribution.imageUrl || p.contribution.thumbnailUrl) && (
                               <img
-                                src={p.contribution.thumbnailUrl}
+                                src={p.contribution.imageUrl || p.contribution.thumbnailUrl}
                                 alt=""
                                 className="w-7 h-7 rounded-md object-cover border border-white/10"
                               />

@@ -122,9 +122,9 @@ export const CommunityMoon: React.FC<CommunityMoonProps> = ({
                       aria-label={`Mảnh ${piece.pieceNumber}: ${piece.status}`}
                     >
                       {/* Completed Artwork Thumbnail */}
-                      {isCompleted && piece.contribution?.thumbnailUrl && (
+                      {isCompleted && (piece.contribution?.imageUrl || piece.contribution?.thumbnailUrl) && (
                         <img
-                          src={piece.contribution.thumbnailUrl}
+                          src={piece.contribution.imageUrl || piece.contribution.thumbnailUrl}
                           alt={piece.contribution.displayName}
                           loading="lazy"
                           className="w-full h-full object-cover select-none pointer-events-none"
@@ -162,9 +162,9 @@ export const CommunityMoon: React.FC<CommunityMoonProps> = ({
           <div className="glass-card rounded-2xl p-3 px-4 flex items-center justify-between gap-4 border border-yellow-400/30 shadow-lg animate-fadeIn">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl overflow-hidden bg-night-900 flex-shrink-0 flex items-center justify-center border border-yellow-400/30">
-                {hoveredPiece.status === 'COMPLETED' && hoveredPiece.contribution?.thumbnailUrl ? (
+                {hoveredPiece.status === 'COMPLETED' && (hoveredPiece.contribution?.imageUrl || hoveredPiece.contribution?.thumbnailUrl) ? (
                   <img
-                    src={hoveredPiece.contribution.thumbnailUrl}
+                    src={hoveredPiece.contribution.imageUrl || hoveredPiece.contribution.thumbnailUrl}
                     alt="thumb"
                     className="w-full h-full object-cover"
                   />

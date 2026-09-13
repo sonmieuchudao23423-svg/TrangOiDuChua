@@ -87,16 +87,16 @@ export class ImageService {
     const artworkPath = path.join(ARTWORKS_DIR, artworkFilename);
     const thumbnailPath = path.join(THUMBNAILS_DIR, thumbnailFilename);
 
-    // 1. Process full artwork (600x600 PNG with sharp)
+    // 1. Process full artwork (800x800 PNG with sharp)
     const artworkBuffer = await sharp(buffer)
-      .resize(600, 600, { fit: 'cover' })
-      .png({ quality: 92, compressionLevel: 8 })
+      .resize(800, 800, { fit: 'cover' })
+      .png({ quality: 95, compressionLevel: 7 })
       .toBuffer();
 
-    // 2. Process fast-loading thumbnail (150x150 WebP)
+    // 2. Process high-clarity thumbnail (400x400 WebP)
     const thumbnailBuffer = await sharp(buffer)
-      .resize(150, 150, { fit: 'cover' })
-      .webp({ quality: 80 })
+      .resize(400, 400, { fit: 'cover' })
+      .webp({ quality: 90 })
       .toBuffer();
 
     // 3. Save local backup copies
