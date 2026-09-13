@@ -53,7 +53,7 @@ async function bootstrap() {
             moonId: moon.id,
             row: r,
             col: c,
-            pieceNumber: pieceNumber++,
+            pieceNumber: isWithin ? pieceNumber++ : 0,
             isWithinMoon: isWithin,
             status: 'AVAILABLE',
           });

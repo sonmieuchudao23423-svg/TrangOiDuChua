@@ -260,7 +260,7 @@ export class AdminController {
             moonId: moon.id,
             row: r,
             col: c,
-            pieceNumber: pieceNum++,
+            pieceNumber: isWithin ? pieceNum++ : 0,
             isWithinMoon: isWithin,
             status: 'AVAILABLE',
           });
