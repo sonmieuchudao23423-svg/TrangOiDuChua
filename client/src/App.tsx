@@ -112,17 +112,32 @@ export const App: React.FC = () => {
     setInspectingPiece(piece);
   };
 
-  // Cancel creative flow
+  // Cancel creative flow - release held piece immediately
   const handleCancelEditor = async () => {
     if (activePiece) {
-      try {
-        await api.releasePiece(activePiece.id);
-      } catch (e) {
-        // ignore
-      }
+      const pieceToRelease = activePiece.id;
+      // Optimistically update pieces array locally so it immediately shows AVAILABLE
+      setPieces((prev) =>
+        prev.map((p) =>
+          p.id === pieceToRelease
+            ? { ...p, status: 'AVAILABLE', lockedBy: undefined, lockedUntil: undefined }
+            : p
+        )
+      );
       setActivePiece(null);
+      setPreviewArtworkUrl(null);
+
+      try {
+        await api.releasePiece(pieceToRelease);
+      } catch (e) {
+        api.releasePieceBeacon(pieceToRelease);
+      }
+
+      // Re-fetch fresh moon data from server
+      loadMoonState();
+    } else {
+      setPreviewArtworkUrl(null);
     }
-    setPreviewArtworkUrl(null);
   };
 
   // Active Piece lock heartbeat & Inactivity auto-release (5 minutes of inactivity)
