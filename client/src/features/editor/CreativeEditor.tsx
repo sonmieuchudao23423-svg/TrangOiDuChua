@@ -17,6 +17,12 @@ import {
   Download,
   ChevronDown,
   Check,
+  ZoomIn,
+  ZoomOut,
+  RotateCw,
+  RotateCcw,
+  Crop,
+  Move,
 } from 'lucide-react';
 import { MoonPiece, StickerItem, BackgroundPreset, FrameItem } from '../../types';
 import { STICKERS, BACKGROUND_PRESETS, COLOR_PALETTE, FRAMES } from '../../utils/stickers';
@@ -176,6 +182,297 @@ const VisualFontSelect: React.FC<VisualFontSelectProps> = ({
   );
 };
 
+interface ImageCropModalProps {
+  imageSrc: string;
+  onConfirm: (croppedDataUrl: string) => void;
+  onCancel: () => void;
+}
+
+const ImageCropModal: React.FC<ImageCropModalProps> = ({
+  imageSrc,
+  onConfirm,
+  onCancel,
+}) => {
+  const [zoom, setZoom] = useState(1);
+  const [rotation, setRotation] = useState(0);
+  const [offset, setOffset] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const dragStartRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
+  const imgRef = useRef<HTMLImageElement | null>(null);
+  const [isImgLoaded, setIsImgLoaded] = useState(false);
+  const previewCanvasRef = useRef<HTMLCanvasElement | null>(null);
+
+  // Load image object
+  useEffect(() => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      imgRef.current = img;
+      setIsImgLoaded(true);
+      setOffset({ x: 0, y: 0 });
+      setZoom(1);
+      setRotation(0);
+    };
+    img.src = imageSrc;
+  }, [imageSrc]);
+
+  // Draw crop preview on 320x320 canvas
+  const drawPreview = useCallback(() => {
+    const canvas = previewCanvasRef.current;
+    const img = imgRef.current;
+    if (!canvas || !img || !isImgLoaded) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const size = canvas.width;
+    ctx.clearRect(0, 0, size, size);
+
+    // Background fill
+    ctx.fillStyle = '#0a0e27';
+    ctx.fillRect(0, 0, size, size);
+
+    ctx.save();
+    // Center point with offset & rotation
+    ctx.translate(size / 2 + offset.x, size / 2 + offset.y);
+    ctx.rotate((rotation * Math.PI) / 180);
+    ctx.scale(zoom, zoom);
+
+    // Calculate base cover scale
+    const baseScale = Math.max(size / img.width, size / img.height);
+    const drawW = img.width * baseScale;
+    const drawH = img.height * baseScale;
+
+    ctx.drawImage(img, -drawW / 2, -drawH / 2, drawW, drawH);
+    ctx.restore();
+  }, [offset, zoom, rotation, isImgLoaded]);
+
+  useEffect(() => {
+    drawPreview();
+  }, [drawPreview]);
+
+  // Pointer drag events for panning
+  const handlePointerDown = (e: React.PointerEvent) => {
+    setIsDragging(true);
+    dragStartRef.current = {
+      x: e.clientX - offset.x,
+      y: e.clientY - offset.y,
+    };
+    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+  };
+
+  const handlePointerMove = (e: React.PointerEvent) => {
+    if (!isDragging) return;
+    setOffset({
+      x: e.clientX - dragStartRef.current.x,
+      y: e.clientY - dragStartRef.current.y,
+    });
+  };
+
+  const handlePointerUp = (e: React.PointerEvent) => {
+    if (isDragging) {
+      setIsDragging(false);
+      try {
+        (e.target as HTMLElement).releasePointerCapture(e.pointerId);
+      } catch (err) {
+        // ignore
+      }
+    }
+  };
+
+  // Wheel zoom
+  const handleWheel = (e: React.WheelEvent) => {
+    e.preventDefault();
+    const delta = e.deltaY > 0 ? -0.1 : 0.1;
+    setZoom((prev) => Math.min(3.5, Math.max(0.5, +(prev + delta).toFixed(2))));
+  };
+
+  // Confirm crop - render to high-res 600x600 canvas
+  const handleConfirmCrop = () => {
+    const img = imgRef.current;
+    if (!img) return;
+
+    const exportCanvas = document.createElement('canvas');
+    exportCanvas.width = 600;
+    exportCanvas.height = 600;
+    const ctx = exportCanvas.getContext('2d');
+    if (!ctx) return;
+
+    // Fill background
+    ctx.fillStyle = '#0a0e27';
+    ctx.fillRect(0, 0, 600, 600);
+
+    ctx.save();
+    // Scale offset from 320px viewport to 600px export
+    const scaleFactor = 600 / 320;
+    ctx.translate(300 + offset.x * scaleFactor, 300 + offset.y * scaleFactor);
+    ctx.rotate((rotation * Math.PI) / 180);
+    ctx.scale(zoom, zoom);
+
+    const baseScale = Math.max(600 / img.width, 600 / img.height);
+    const drawW = img.width * baseScale;
+    const drawH = img.height * baseScale;
+
+    ctx.drawImage(img, -drawW / 2, -drawH / 2, drawW, drawH);
+    ctx.restore();
+
+    const croppedUrl = exportCanvas.toDataURL('image/png', 0.95);
+    onConfirm(croppedUrl);
+  };
+
+  const handleRotate = () => {
+    setRotation((prev) => (prev + 90) % 360);
+  };
+
+  const handleReset = () => {
+    setZoom(1);
+    setRotation(0);
+    setOffset({ x: 0, y: 0 });
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-night-950/85 backdrop-blur-md animate-fadeIn">
+      <div className="glass-panel w-full max-w-md rounded-3xl p-5 sm:p-6 border border-yellow-400/40 shadow-2xl space-y-4 text-left">
+        {/* Header */}
+        <div className="flex items-center justify-between pb-2 border-b border-white/10">
+          <div className="flex items-center gap-2">
+            <Crop className="w-5 h-5 text-yellow-400" />
+            <h3 className="font-display font-bold text-base sm:text-lg text-yellow-300">
+              Cắt & Căn Chỉnh Ảnh
+            </h3>
+          </div>
+          <button
+            type="button"
+            onClick={onCancel}
+            className="p-1.5 rounded-xl text-slate-400 hover:text-white hover:bg-white/10 transition-colors"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        {/* Cropper Viewport */}
+        <div className="flex flex-col items-center gap-2">
+          <div
+            className="relative w-[280px] h-[280px] sm:w-[320px] sm:h-[320px] rounded-2xl overflow-hidden border-2 border-yellow-400/60 shadow-2xl bg-night-950 cursor-grab active:cursor-grabbing select-none touch-none group"
+            onPointerDown={handlePointerDown}
+            onPointerMove={handlePointerMove}
+            onPointerUp={handlePointerUp}
+            onWheel={handleWheel}
+          >
+            <canvas
+              ref={previewCanvasRef}
+              width={320}
+              height={320}
+              className="w-full h-full pointer-events-none"
+            />
+
+            {/* Grid Overlay (Rule of Thirds) */}
+            <div className="absolute inset-0 pointer-events-none grid grid-cols-3 grid-rows-3 border border-yellow-400/30">
+              <div className="border-r border-b border-yellow-400/20" />
+              <div className="border-r border-b border-yellow-400/20" />
+              <div className="border-b border-yellow-400/20" />
+              <div className="border-r border-b border-yellow-400/20" />
+              <div className="border-r border-b border-yellow-400/20" />
+              <div className="border-b border-yellow-400/20" />
+              <div className="border-r border-yellow-400/20" />
+              <div className="border-r border-yellow-400/20" />
+              <div />
+            </div>
+
+            {/* Drag hint badge */}
+            <div className="absolute bottom-2 left-1/2 -translate-x-1/2 px-2.5 py-1 rounded-full bg-night-950/80 backdrop-blur-sm text-[10px] text-yellow-200 font-semibold border border-yellow-400/30 flex items-center gap-1.5 pointer-events-none opacity-80 group-hover:opacity-100 transition-opacity">
+              <Move className="w-3 h-3" />
+              <span>Chạm & kéo để di chuyển ảnh</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Zoom & Adjustment Controls */}
+        <div className="space-y-3 pt-1">
+          {/* Zoom Slider */}
+          <div className="space-y-1">
+            <div className="flex items-center justify-between text-xs text-slate-300 font-semibold">
+              <span className="flex items-center gap-1">
+                <ZoomIn className="w-3.5 h-3.5 text-yellow-400" />
+                <span>Phóng to / Thu nhỏ:</span>
+              </span>
+              <span className="text-yellow-300 font-bold">{Math.round(zoom * 100)}%</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setZoom((z) => Math.max(0.5, +(z - 0.2).toFixed(2)))}
+                className="p-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-slate-200 transition-colors"
+                title="Thu nhỏ"
+              >
+                <ZoomOut className="w-4 h-4" />
+              </button>
+              <input
+                type="range"
+                min="0.5"
+                max="3.0"
+                step="0.05"
+                value={zoom}
+                onChange={(e) => setZoom(parseFloat(e.target.value))}
+                className="flex-1 accent-yellow-400 cursor-pointer"
+              />
+              <button
+                type="button"
+                onClick={() => setZoom((z) => Math.min(3.0, +(z + 0.2).toFixed(2)))}
+                className="p-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-slate-200 transition-colors"
+                title="Phóng to"
+              >
+                <ZoomIn className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+
+          {/* Rotate & Reset Buttons */}
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={handleRotate}
+                className="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-slate-200 text-xs font-semibold flex items-center gap-1.5 transition-colors border border-white/10"
+              >
+                <RotateCw className="w-3.5 h-3.5 text-yellow-400" />
+                <span>Xoay 90°</span>
+              </button>
+              <button
+                type="button"
+                onClick={handleReset}
+                className="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-slate-300 text-xs font-semibold flex items-center gap-1.5 transition-colors border border-white/10"
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
+                <span>Đặt lại</span>
+              </button>
+            </div>
+            <span className="text-[11px] text-slate-400 italic">Khung 1:1 chuẩn Trăng</span>
+          </div>
+        </div>
+
+        {/* Modal Actions */}
+        <div className="flex items-center gap-2.5 pt-2 border-t border-white/10">
+          <button
+            type="button"
+            onClick={onCancel}
+            className="w-1/3 py-2.5 rounded-xl glass-panel text-slate-300 hover:text-white text-xs font-bold transition-all text-center"
+          >
+            Hủy
+          </button>
+          <button
+            type="button"
+            onClick={handleConfirmCrop}
+            className="w-2/3 py-2.5 rounded-xl bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-400 text-night-950 font-bold text-xs hover:brightness-110 shadow-lg shadow-yellow-400/30 flex items-center justify-center gap-1.5 active:scale-98 transition-all"
+          >
+            <Check className="w-4 h-4" />
+            <span>Áp dụng ảnh này</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 export const CreativeEditor: React.FC<CreativeEditorProps> = ({
   piece,
   onPreview,
@@ -201,6 +498,7 @@ export const CreativeEditor: React.FC<CreativeEditorProps> = ({
   // Background state
   const [currentBg, setCurrentBg] = useState<BackgroundPreset>(BACKGROUND_PRESETS[0]);
   const bgImageRef = useRef<HTMLImageElement | null>(null);
+  const [cropImageSrc, setCropImageSrc] = useState<string | null>(null);
 
   // Selected Photo Frame (Overlay on top of background & under stickers/text)
   const [selectedFrame, setSelectedFrame] = useState<FrameItem | null>(FRAMES[0] || null);
@@ -516,7 +814,7 @@ export const CreativeEditor: React.FC<CreativeEditorProps> = ({
     pushDrawHistory();
   };
 
-  // PHOTO UPLOAD HANDLER: Keeps existing drawing strokes and stickers intact ON TOP!
+  // PHOTO UPLOAD HANDLER: Opens Crop, Zoom & Pan adjuster modal
   const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -524,15 +822,23 @@ export const CreativeEditor: React.FC<CreativeEditorProps> = ({
     const reader = new FileReader();
     reader.onload = (event) => {
       const dataUrl = event.target?.result as string;
-      const img = new Image();
-      img.onload = () => {
-        bgImageRef.current = img;
-        renderBackgroundLayer(); // Renders as background layer under drawing strokes!
-      };
-      img.src = dataUrl;
+      if (dataUrl) {
+        setCropImageSrc(dataUrl); // Opens the Crop & Zoom modal!
+      }
     };
     reader.readAsDataURL(file);
     e.target.value = '';
+  };
+
+  // When photo crop is confirmed
+  const handleConfirmCroppedPhoto = (croppedDataUrl: string) => {
+    const img = new Image();
+    img.onload = () => {
+      bgImageRef.current = img;
+      renderBackgroundLayer(); // Renders as background layer under drawing strokes!
+    };
+    img.src = croppedDataUrl;
+    setCropImageSrc(null);
   };
 
   // Add Built-in or Asset Sticker
@@ -1608,6 +1914,15 @@ export const CreativeEditor: React.FC<CreativeEditorProps> = ({
           )}
         </div>
       </div>
+
+      {/* Photo Crop, Zoom & Pan Adjuster Modal */}
+      {cropImageSrc && (
+        <ImageCropModal
+          imageSrc={cropImageSrc}
+          onConfirm={handleConfirmCroppedPhoto}
+          onCancel={() => setCropImageSrc(null)}
+        />
+      )}
     </div>
   );
 };
