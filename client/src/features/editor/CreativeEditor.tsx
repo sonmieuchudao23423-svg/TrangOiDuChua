@@ -1658,25 +1658,50 @@ export const CreativeEditor: React.FC<CreativeEditorProps> = ({
               </div>
 
               <div className="space-y-2">
-                <span className="text-xs text-slate-300 font-semibold block">
-                  Bảng màu Trung Thu:
-                </span>
-                <div className="grid grid-cols-6 gap-2">
+                <div className="flex items-center justify-between text-xs text-slate-300 font-semibold">
+                  <span>Bảng màu nét vẽ:</span>
+                  <span className="font-mono text-[10px] text-slate-400 uppercase">{brushColor}</span>
+                </div>
+                <div className="flex items-center flex-wrap gap-2">
                   {COLOR_PALETTE.map((c) => (
                     <button
                       key={c}
+                      type="button"
                       onClick={() => {
                         setBrushColor(c);
                         setTool('brush');
                       }}
                       style={{ backgroundColor: c }}
-                      className={`w-9 h-9 rounded-xl border-2 transition-transform ${brushColor === c && tool === 'brush'
-                        ? 'border-white scale-110 shadow-lg'
-                        : 'border-transparent hover:scale-105'
+                      className={`w-7 h-7 sm:w-8 sm:h-8 rounded-xl border-2 transition-transform ${brushColor.toLowerCase() === c.toLowerCase() && tool === 'brush'
+                        ? 'border-white scale-110 shadow-lg ring-2 ring-yellow-400/60 z-10'
+                        : 'border-white/10 hover:scale-105'
                         }`}
                       title={c}
                     />
                   ))}
+
+                  {/* Circular Rainbow Color Wheel Picker */}
+                  <label
+                    className={`relative w-7 h-7 sm:w-8 sm:h-8 rounded-xl cursor-pointer flex items-center justify-center border-2 shadow-md hover:scale-110 transition-transform overflow-hidden flex-shrink-0 ${
+                      !COLOR_PALETTE.map((c) => c.toLowerCase()).includes(brushColor.toLowerCase()) && tool === 'brush'
+                        ? 'border-white scale-110 shadow-lg ring-2 ring-yellow-400/60 z-10'
+                        : 'border-white/40'
+                    }`}
+                    style={{
+                      background: 'conic-gradient(red, yellow, lime, aqua, blue, magenta, red)',
+                    }}
+                    title="Bấm để mở bảng màu tròn tùy chọn"
+                  >
+                    <input
+                      type="color"
+                      value={brushColor}
+                      onChange={(e) => {
+                        setBrushColor(e.target.value);
+                        setTool('brush');
+                      }}
+                      className="opacity-0 absolute inset-0 w-full h-full cursor-pointer"
+                    />
+                  </label>
                 </div>
               </div>
             </div>
