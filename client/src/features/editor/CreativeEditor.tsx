@@ -29,6 +29,28 @@ interface CreativeEditorProps {
 
 type EditorTab = 'draw' | 'stickers' | 'text' | 'bg' | 'frames';
 
+export const FONT_OPTIONS = [
+  { id: 'quicksand', name: 'Tròn trịa (Quicksand)', family: '"Quicksand", sans-serif' },
+  { id: 'baloo2', name: 'Ngộ nghĩnh (Baloo 2)', family: '"Baloo 2", cursive' },
+  { id: 'pacifico', name: 'Nghệ thuật (Pacifico)', family: '"Pacifico", cursive' },
+  { id: 'dancing', name: 'Thư pháp (Dancing)', family: '"Dancing Script", cursive' },
+  { id: 'vietnam', name: 'Hiện đại (Vietnam)', family: '"Be Vietnam Pro", sans-serif' },
+  { id: 'comfortaa', name: 'Mềm mại (Comfortaa)', family: '"Comfortaa", cursive' },
+];
+
+export const PRESET_COLORS = [
+  '#ffffff',
+  '#fef08a',
+  '#facc15',
+  '#fb923c',
+  '#ef4444',
+  '#f43f5e',
+  '#ec4899',
+  '#c084fc',
+  '#38bdf8',
+  '#4ade80',
+];
+
 export interface DraggableText {
   id: string;
   text: string;
@@ -36,6 +58,7 @@ export interface DraggableText {
   y: number; // 0..600
   color: string;
   fontSize: number;
+  fontFamily?: string;
 }
 
 export interface CanvasStickerItem {
@@ -122,12 +145,14 @@ export const CreativeEditor: React.FC<CreativeEditorProps> = ({
       y: 520,
       color: '#fef08a',
       fontSize: 24,
+      fontFamily: '"Quicksand", sans-serif',
     },
   ]);
   const [selectedTextId, setSelectedTextId] = useState<string | null>(null);
   const [textInput, setTextInput] = useState('');
   const [textColor, setTextColor] = useState('#ffffff');
   const [textSize, setTextSize] = useState(24);
+  const [textFontFamily, setTextFontFamily] = useState('"Quicksand", sans-serif');
 
   // Dragging state for both text and stickers
   const draggingItemRef = useRef<{
@@ -451,6 +476,7 @@ export const CreativeEditor: React.FC<CreativeEditorProps> = ({
       y: 250 + (textItems.length * 40) % 200,
       color: textColor,
       fontSize: textSize,
+      fontFamily: textFontFamily,
     };
     setTextItems((prev) => [...prev, newItem]);
     setSelectedTextId(newId);
@@ -618,7 +644,8 @@ export const CreativeEditor: React.FC<CreativeEditorProps> = ({
     // 4. Draw Draggable Text ON TOP
     textItems.forEach((t) => {
       fCtx.save();
-      fCtx.font = `bold ${t.fontSize}px 'Quicksand', 'Comfortaa', sans-serif`;
+      const fontFam = t.fontFamily || '"Quicksand", sans-serif';
+      fCtx.font = `bold ${t.fontSize}px ${fontFam}`;
       fCtx.fillStyle = t.color;
       fCtx.textAlign = 'center';
       fCtx.textBaseline = 'middle';
@@ -712,7 +739,8 @@ export const CreativeEditor: React.FC<CreativeEditorProps> = ({
     // 5. Draw Text
     textItems.forEach((t) => {
       fCtx.save();
-      fCtx.font = `bold ${t.fontSize}px 'Quicksand', 'Comfortaa', sans-serif`;
+      const fontFam = t.fontFamily || '"Quicksand", sans-serif';
+      fCtx.font = `bold ${t.fontSize}px ${fontFam}`;
       fCtx.fillStyle = t.color;
       fCtx.textAlign = 'center';
       fCtx.textBaseline = 'middle';
@@ -862,7 +890,7 @@ export const CreativeEditor: React.FC<CreativeEditorProps> = ({
                     />
                   ) : (
                     <div
-                      className="w-full h-full pointer-events-none drop-shadow-md flex items-center justify-center"
+                      className="w-full h-full pointer-events-none drop-shadow-md flex items-center justify-center [&>svg]:w-full [&>svg]:h-full [&>svg]:overflow-visible"
                       dangerouslySetInnerHTML={{ __html: stk.svgOrImgUrl }}
                     />
                   )}
@@ -888,6 +916,7 @@ export const CreativeEditor: React.FC<CreativeEditorProps> = ({
                     transform: 'translate(-50%, -50%)',
                     color: item.color,
                     fontSize: `${(item.fontSize / CANVAS_SIZE) * 460}px`,
+                    fontFamily: item.fontFamily || '"Quicksand", sans-serif',
                   }}
                   className={`absolute z-30 cursor-grab active:cursor-grabbing px-2 py-0.5 whitespace-nowrap font-bold select-none drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)] transition-all ${isSelected
                     ? 'ring-1.5 ring-yellow-400 rounded-lg bg-black/20'
@@ -1117,7 +1146,7 @@ export const CreativeEditor: React.FC<CreativeEditorProps> = ({
                         />
                       ) : (
                         <div
-                          className="w-full h-full pointer-events-none"
+                          className="w-full h-full pointer-events-none flex items-center justify-center [&>svg]:w-full [&>svg]:h-full"
                           dangerouslySetInnerHTML={{ __html: st.svg || '' }}
                         />
                       )}
@@ -1176,22 +1205,72 @@ export const CreativeEditor: React.FC<CreativeEditorProps> = ({
                     />
                   </div>
 
-                  {/* Color selector */}
-                  <div className="flex items-center gap-1.5 pt-1">
-                    <span className="text-[11px] text-slate-400">Màu:</span>
-                    {['#ffffff', '#fef08a', '#facc15', '#f97316', '#f43f5e', '#67e8f9'].map(
-                      (c) => (
+                  {/* Font Family selector */}
+                  <div className="space-y-1.5 pt-1">
+                    <div className="flex justify-between text-[11px] text-slate-300">
+                      <span>Kiểu chữ:</span>
+                      <span className="text-yellow-300 font-semibold text-[10px]">
+                        {FONT_OPTIONS.find((f) => f.family === (selectedText.fontFamily || '"Quicksand", sans-serif'))?.name || 'Tròn trịa'}
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-1.5">
+                      {FONT_OPTIONS.map((f) => {
+                        const isSelected = (selectedText.fontFamily || '"Quicksand", sans-serif') === f.family;
+                        return (
+                          <button
+                            key={f.id}
+                            onClick={() => handleUpdateSelectedText({ fontFamily: f.family })}
+                            style={{ fontFamily: f.family }}
+                            className={`px-2 py-1.5 rounded-xl border text-[11px] text-left truncate transition-all ${
+                              isSelected
+                                ? 'border-yellow-400 bg-yellow-400/20 text-yellow-300 font-bold shadow-sm'
+                                : 'border-white/10 bg-night-950/60 text-slate-300 hover:border-yellow-400/40'
+                            }`}
+                          >
+                            {f.name}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Color selector & Circular Rainbow Wheel */}
+                  <div className="space-y-1.5 pt-1">
+                    <div className="flex items-center justify-between text-[11px] text-slate-300">
+                      <span>Màu sắc chữ:</span>
+                      <span className="font-mono text-[10px] text-slate-400 uppercase">{selectedText.color}</span>
+                    </div>
+                    <div className="flex items-center flex-wrap gap-1.5">
+                      {PRESET_COLORS.map((c) => (
                         <button
                           key={c}
                           onClick={() => handleUpdateSelectedText({ color: c })}
                           style={{ backgroundColor: c }}
-                          className={`w-6 h-6 rounded-full border-2 ${selectedText.color === c
-                            ? 'border-white scale-110'
-                            : 'border-transparent'
-                            }`}
+                          className={`w-6 h-6 rounded-full border-2 transition-transform ${
+                            selectedText.color.toLowerCase() === c.toLowerCase()
+                              ? 'border-white scale-125 shadow-md shadow-black/50 z-10'
+                              : 'border-white/20 hover:scale-110'
+                          }`}
+                          title={c}
                         />
-                      )
-                    )}
+                      ))}
+
+                      {/* Circular Rainbow Color Wheel Picker */}
+                      <label
+                        className="relative w-6 h-6 rounded-full cursor-pointer flex items-center justify-center border-2 border-white/60 shadow-md hover:scale-125 transition-transform overflow-hidden flex-shrink-0"
+                        style={{
+                          background: 'conic-gradient(red, yellow, lime, aqua, blue, magenta, red)',
+                        }}
+                        title="Bấm để mở bảng màu tròn tùy chọn"
+                      >
+                        <input
+                          type="color"
+                          value={selectedText.color}
+                          onChange={(e) => handleUpdateSelectedText({ color: e.target.value })}
+                          className="opacity-0 absolute inset-0 w-full h-full cursor-pointer"
+                        />
+                      </label>
+                    </div>
                   </div>
                 </div>
               ) : (
@@ -1211,8 +1290,28 @@ export const CreativeEditor: React.FC<CreativeEditorProps> = ({
                   value={textInput}
                   onChange={(e) => setTextInput(e.target.value)}
                   placeholder="VD: Cầu chúc vạn sự an lành!"
+                  style={{ fontFamily: textFontFamily }}
                   className="w-full px-3 py-2 rounded-xl bg-night-950 border border-white/10 text-white text-xs focus:outline-none focus:border-yellow-400"
                 />
+
+                {/* Font selection for new text */}
+                <div className="grid grid-cols-3 gap-1">
+                  {FONT_OPTIONS.map((f) => (
+                    <button
+                      key={f.id}
+                      type="button"
+                      onClick={() => setTextFontFamily(f.family)}
+                      style={{ fontFamily: f.family }}
+                      className={`px-1.5 py-1 rounded-lg border text-[10px] truncate transition-all ${
+                        textFontFamily === f.family
+                          ? 'border-yellow-400 bg-yellow-400/20 text-yellow-300 font-bold'
+                          : 'border-white/10 bg-night-950/40 text-slate-400 hover:text-white'
+                      }`}
+                    >
+                      {f.name.split(' ')[0]}
+                    </button>
+                  ))}
+                </div>
 
                 <button
                   onClick={handleAddDraggableText}
