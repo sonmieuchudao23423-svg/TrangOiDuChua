@@ -193,97 +193,289 @@ const ImageCropModal: React.FC<ImageCropModalProps> = ({
   onConfirm,
   onCancel,
 }) => {
-  const [zoom, setZoom] = useState(1);
-  const [rotation, setRotation] = useState(0);
-  const [offset, setOffset] = useState({ x: 0, y: 0 });
-  const [isDragging, setIsDragging] = useState(false);
-  const dragStartRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
-  const imgRef = useRef<HTMLImageElement | null>(null);
-  const [isImgLoaded, setIsImgLoaded] = useState(false);
+  const [uiZoom, setUiZoom] = useState(1);
+  const [uiRotation, setUiRotation] = useState(0);
+
   const previewCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const imgRef = useRef<HTMLImageElement | null>(null);
+  const isImgLoadedRef = useRef(false);
 
-  // Load image object
-  useEffect(() => {
-    const img = new Image();
-    img.crossOrigin = 'anonymous';
-    img.onload = () => {
-      imgRef.current = img;
-      setIsImgLoaded(true);
-      setOffset({ x: 0, y: 0 });
-      setZoom(1);
-      setRotation(0);
-    };
-    img.src = imageSrc;
-  }, [imageSrc]);
+  // Transform ref for ultra-smooth 60fps direct canvas rendering (zero React re-render lag)
+  const transformRef = useRef({
+    x: 0,
+    y: 0,
+    zoom: 1,
+    rotation: 0,
+  });
 
-  // Draw crop preview on 320x320 canvas
-  const drawPreview = useCallback(() => {
+  const rafIdRef = useRef<number | null>(null);
+
+  // Core render canvas function
+  const renderCanvas = useCallback(() => {
     const canvas = previewCanvasRef.current;
     const img = imgRef.current;
-    if (!canvas || !img || !isImgLoaded) return;
+    if (!canvas || !img || !isImgLoadedRef.current) return;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    const size = canvas.width;
+    const size = canvas.width; // 320px
     ctx.clearRect(0, 0, size, size);
 
     // Background fill
     ctx.fillStyle = '#0a0e27';
     ctx.fillRect(0, 0, size, size);
 
+    const { x, y, zoom, rotation } = transformRef.current;
+
     ctx.save();
-    // Center point with offset & rotation
-    ctx.translate(size / 2 + offset.x, size / 2 + offset.y);
+    ctx.translate(size / 2 + x, size / 2 + y);
     ctx.rotate((rotation * Math.PI) / 180);
     ctx.scale(zoom, zoom);
 
-    // Calculate base cover scale
+    // Base scale to cover 320x320
     const baseScale = Math.max(size / img.width, size / img.height);
     const drawW = img.width * baseScale;
     const drawH = img.height * baseScale;
 
     ctx.drawImage(img, -drawW / 2, -drawH / 2, drawW, drawH);
     ctx.restore();
-  }, [offset, zoom, rotation, isImgLoaded]);
+  }, []);
 
-  useEffect(() => {
-    drawPreview();
-  }, [drawPreview]);
-
-  // Pointer drag events for panning
-  const handlePointerDown = (e: React.PointerEvent) => {
-    setIsDragging(true);
-    dragStartRef.current = {
-      x: e.clientX - offset.x,
-      y: e.clientY - offset.y,
-    };
-    (e.target as HTMLElement).setPointerCapture(e.pointerId);
-  };
-
-  const handlePointerMove = (e: React.PointerEvent) => {
-    if (!isDragging) return;
-    setOffset({
-      x: e.clientX - dragStartRef.current.x,
-      y: e.clientY - dragStartRef.current.y,
+  const scheduleRender = useCallback(() => {
+    if (rafIdRef.current !== null) return;
+    rafIdRef.current = requestAnimationFrame(() => {
+      rafIdRef.current = null;
+      renderCanvas();
     });
-  };
+  }, [renderCanvas]);
 
-  const handlePointerUp = (e: React.PointerEvent) => {
-    if (isDragging) {
-      setIsDragging(false);
-      try {
-        (e.target as HTMLElement).releasePointerCapture(e.pointerId);
-      } catch (err) {
-        // ignore
+  // Load image
+  useEffect(() => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      imgRef.current = img;
+      isImgLoadedRef.current = true;
+      transformRef.current = { x: 0, y: 0, zoom: 1, rotation: 0 };
+      setUiZoom(1);
+      setUiRotation(0);
+      scheduleRender();
+    };
+    img.src = imageSrc;
+  }, [imageSrc, scheduleRender]);
+
+  // Gesture Tracking Ref for 1-finger pan and 2-finger pinch
+  const gestureRef = useRef<{
+    isDragging: boolean;
+    isPinching: boolean;
+    startTouches: { id: number; x: number; y: number }[];
+    startOffset: { x: number; y: number };
+    startDist: number;
+    startZoom: number;
+    lastCenter: { x: number; y: number };
+  }>({
+    isDragging: false,
+    isPinching: false,
+    startTouches: [],
+    startOffset: { x: 0, y: 0 },
+    startDist: 0,
+    startZoom: 1,
+    lastCenter: { x: 0, y: 0 },
+  });
+
+  // Native Touch Event listeners with { passive: false } to prevent browser pinch/scroll
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const getTouchPoint = (touch: Touch) => {
+      const rect = container.getBoundingClientRect();
+      return {
+        id: touch.identifier,
+        x: touch.clientX - rect.left,
+        y: touch.clientY - rect.top,
+      };
+    };
+
+    const getDistance = (p1: { x: number; y: number }, p2: { x: number; y: number }) => {
+      return Math.hypot(p2.x - p1.x, p2.y - p1.y);
+    };
+
+    const getCenter = (p1: { x: number; y: number }, p2: { x: number; y: number }) => {
+      return { x: (p1.x + p2.x) / 2, y: (p1.y + p2.y) / 2 };
+    };
+
+    const handleTouchStart = (e: TouchEvent) => {
+      e.preventDefault();
+      const touches = Array.from(e.touches).map(getTouchPoint);
+
+      if (touches.length === 1) {
+        // Single finger pan
+        gestureRef.current = {
+          isDragging: true,
+          isPinching: false,
+          startTouches: touches,
+          startOffset: { x: transformRef.current.x, y: transformRef.current.y },
+          startDist: 0,
+          startZoom: transformRef.current.zoom,
+          lastCenter: touches[0],
+        };
+      } else if (touches.length >= 2) {
+        // Two finger pinch & pan
+        const dist = getDistance(touches[0], touches[1]);
+        const center = getCenter(touches[0], touches[1]);
+        gestureRef.current = {
+          isDragging: true,
+          isPinching: true,
+          startTouches: [touches[0], touches[1]],
+          startOffset: { x: transformRef.current.x, y: transformRef.current.y },
+          startDist: Math.max(dist, 10),
+          startZoom: transformRef.current.zoom,
+          lastCenter: center,
+        };
       }
-    }
+    };
+
+    const handleTouchMove = (e: TouchEvent) => {
+      e.preventDefault();
+      if (!gestureRef.current.isDragging) return;
+
+      const touches = Array.from(e.touches).map(getTouchPoint);
+
+      if (touches.length === 1 && !gestureRef.current.isPinching) {
+        // Single finger dragging
+        const dx = touches[0].x - gestureRef.current.startTouches[0].x;
+        const dy = touches[0].y - gestureRef.current.startTouches[0].y;
+
+        transformRef.current.x = gestureRef.current.startOffset.x + dx;
+        transformRef.current.y = gestureRef.current.startOffset.y + dy;
+        scheduleRender();
+      } else if (touches.length >= 2) {
+        // Two fingers: Pinch zoom + Pan
+        const p1 = touches[0];
+        const p2 = touches[1];
+        const currentDist = getDistance(p1, p2);
+        const currentCenter = getCenter(p1, p2);
+
+        // 1. Calculate new zoom
+        if (gestureRef.current.startDist > 0) {
+          const scaleRatio = currentDist / gestureRef.current.startDist;
+          const newZoom = Math.min(3.5, Math.max(0.5, gestureRef.current.startZoom * scaleRatio));
+          transformRef.current.zoom = newZoom;
+        }
+
+        // 2. Calculate center pan delta
+        const deltaCenterX = currentCenter.x - gestureRef.current.lastCenter.x;
+        const deltaCenterY = currentCenter.y - gestureRef.current.lastCenter.y;
+        transformRef.current.x += deltaCenterX;
+        transformRef.current.y += deltaCenterY;
+        gestureRef.current.lastCenter = currentCenter;
+
+        scheduleRender();
+      }
+    };
+
+    const handleTouchEnd = (e: TouchEvent) => {
+      e.preventDefault();
+      if (e.touches.length === 0) {
+        gestureRef.current.isDragging = false;
+        gestureRef.current.isPinching = false;
+        setUiZoom(+transformRef.current.zoom.toFixed(2));
+      } else if (e.touches.length === 1) {
+        const touches = Array.from(e.touches).map(getTouchPoint);
+        gestureRef.current = {
+          isDragging: true,
+          isPinching: false,
+          startTouches: touches,
+          startOffset: { x: transformRef.current.x, y: transformRef.current.y },
+          startDist: 0,
+          startZoom: transformRef.current.zoom,
+          lastCenter: touches[0],
+        };
+        setUiZoom(+transformRef.current.zoom.toFixed(2));
+      }
+    };
+
+    container.addEventListener('touchstart', handleTouchStart, { passive: false });
+    container.addEventListener('touchmove', handleTouchMove, { passive: false });
+    container.addEventListener('touchend', handleTouchEnd, { passive: false });
+    container.addEventListener('touchcancel', handleTouchEnd, { passive: false });
+
+    return () => {
+      container.removeEventListener('touchstart', handleTouchStart);
+      container.removeEventListener('touchmove', handleTouchMove);
+      container.removeEventListener('touchend', handleTouchEnd);
+      container.removeEventListener('touchcancel', handleTouchEnd);
+    };
+  }, [scheduleRender]);
+
+  // Desktop Mouse Handlers
+  const mouseDragRef = useRef<{ isDown: boolean; startX: number; startY: number; startOffset: { x: number; y: number } }>({
+    isDown: false,
+    startX: 0,
+    startY: 0,
+    startOffset: { x: 0, y: 0 },
+  });
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    mouseDragRef.current = {
+      isDown: true,
+      startX: e.clientX,
+      startY: e.clientY,
+      startOffset: { x: transformRef.current.x, y: transformRef.current.y },
+    };
   };
 
-  // Wheel zoom
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!mouseDragRef.current.isDown) return;
+    const dx = e.clientX - mouseDragRef.current.startX;
+    const dy = e.clientY - mouseDragRef.current.startY;
+    transformRef.current.x = mouseDragRef.current.startOffset.x + dx;
+    transformRef.current.y = mouseDragRef.current.startOffset.y + dy;
+    scheduleRender();
+  };
+
+  const handleMouseUp = () => {
+    mouseDragRef.current.isDown = false;
+  };
+
+  // Desktop Mouse Wheel Zoom
   const handleWheel = (e: React.WheelEvent) => {
     e.preventDefault();
     const delta = e.deltaY > 0 ? -0.1 : 0.1;
-    setZoom((prev) => Math.min(3.5, Math.max(0.5, +(prev + delta).toFixed(2))));
+    const newZoom = Math.min(3.5, Math.max(0.5, +(transformRef.current.zoom + delta).toFixed(2)));
+    transformRef.current.zoom = newZoom;
+    setUiZoom(newZoom);
+    scheduleRender();
+  };
+
+  // UI Zoom Slider change
+  const handleSliderZoom = (val: number) => {
+    transformRef.current.zoom = val;
+    setUiZoom(val);
+    scheduleRender();
+  };
+
+  const handleStepZoom = (delta: number) => {
+    const newZoom = Math.min(3.5, Math.max(0.5, +(transformRef.current.zoom + delta).toFixed(2)));
+    transformRef.current.zoom = newZoom;
+    setUiZoom(newZoom);
+    scheduleRender();
+  };
+
+  const handleRotate = () => {
+    const nextRot = (transformRef.current.rotation + 90) % 360;
+    transformRef.current.rotation = nextRot;
+    setUiRotation(nextRot);
+    scheduleRender();
+  };
+
+  const handleReset = () => {
+    transformRef.current = { x: 0, y: 0, zoom: 1, rotation: 0 };
+    setUiZoom(1);
+    setUiRotation(0);
+    scheduleRender();
   };
 
   // Confirm crop - render to high-res 600x600 canvas
@@ -301,10 +493,12 @@ const ImageCropModal: React.FC<ImageCropModalProps> = ({
     ctx.fillStyle = '#0a0e27';
     ctx.fillRect(0, 0, 600, 600);
 
+    const { x, y, zoom, rotation } = transformRef.current;
+
     ctx.save();
     // Scale offset from 320px viewport to 600px export
     const scaleFactor = 600 / 320;
-    ctx.translate(300 + offset.x * scaleFactor, 300 + offset.y * scaleFactor);
+    ctx.translate(300 + x * scaleFactor, 300 + y * scaleFactor);
     ctx.rotate((rotation * Math.PI) / 180);
     ctx.scale(zoom, zoom);
 
@@ -319,19 +513,9 @@ const ImageCropModal: React.FC<ImageCropModalProps> = ({
     onConfirm(croppedUrl);
   };
 
-  const handleRotate = () => {
-    setRotation((prev) => (prev + 90) % 360);
-  };
-
-  const handleReset = () => {
-    setZoom(1);
-    setRotation(0);
-    setOffset({ x: 0, y: 0 });
-  };
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-night-950/85 backdrop-blur-md animate-fadeIn">
-      <div className="glass-panel w-full max-w-md rounded-3xl p-5 sm:p-6 border border-yellow-400/40 shadow-2xl space-y-4 text-left">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-night-950/85 backdrop-blur-md animate-fadeIn">
+      <div className="glass-panel w-full max-w-md rounded-3xl p-4 sm:p-6 border border-yellow-400/40 shadow-2xl space-y-3.5 sm:space-y-4 text-left max-h-[95vh] overflow-y-auto">
         {/* Header */}
         <div className="flex items-center justify-between pb-2 border-b border-white/10">
           <div className="flex items-center gap-2">
@@ -349,14 +533,17 @@ const ImageCropModal: React.FC<ImageCropModalProps> = ({
           </button>
         </div>
 
-        {/* Cropper Viewport */}
+        {/* Cropper Viewport with touch-none */}
         <div className="flex flex-col items-center gap-2">
           <div
-            className="relative w-[280px] h-[280px] sm:w-[320px] sm:h-[320px] rounded-2xl overflow-hidden border-2 border-yellow-400/60 shadow-2xl bg-night-950 cursor-grab active:cursor-grabbing select-none touch-none group"
-            onPointerDown={handlePointerDown}
-            onPointerMove={handlePointerMove}
-            onPointerUp={handlePointerUp}
+            ref={containerRef}
+            onMouseDown={handleMouseDown}
+            onMouseMove={handleMouseMove}
+            onMouseUp={handleMouseUp}
+            onMouseLeave={handleMouseUp}
             onWheel={handleWheel}
+            style={{ touchAction: 'none' }}
+            className="relative w-[280px] h-[280px] sm:w-[320px] sm:h-[320px] rounded-2xl overflow-hidden border-2 border-yellow-400/60 shadow-2xl bg-night-950 cursor-grab active:cursor-grabbing select-none touch-none group"
           >
             <canvas
               ref={previewCanvasRef}
@@ -379,9 +566,9 @@ const ImageCropModal: React.FC<ImageCropModalProps> = ({
             </div>
 
             {/* Drag hint badge */}
-            <div className="absolute bottom-2 left-1/2 -translate-x-1/2 px-2.5 py-1 rounded-full bg-night-950/80 backdrop-blur-sm text-[10px] text-yellow-200 font-semibold border border-yellow-400/30 flex items-center gap-1.5 pointer-events-none opacity-80 group-hover:opacity-100 transition-opacity">
-              <Move className="w-3 h-3" />
-              <span>Chạm & kéo để di chuyển ảnh</span>
+            <div className="absolute bottom-2 left-1/2 -translate-x-1/2 px-2.5 py-1 rounded-full bg-night-950/85 backdrop-blur-sm text-[10px] text-yellow-200 font-semibold border border-yellow-400/30 flex items-center gap-1.5 pointer-events-none opacity-90 group-hover:opacity-100 transition-opacity">
+              <Move className="w-3 h-3 text-yellow-400" />
+              <span>1 ngón để dời • 2 ngón để phóng to</span>
             </div>
           </div>
         </div>
@@ -395,12 +582,12 @@ const ImageCropModal: React.FC<ImageCropModalProps> = ({
                 <ZoomIn className="w-3.5 h-3.5 text-yellow-400" />
                 <span>Phóng to / Thu nhỏ:</span>
               </span>
-              <span className="text-yellow-300 font-bold">{Math.round(zoom * 100)}%</span>
+              <span className="text-yellow-300 font-bold">{Math.round(uiZoom * 100)}%</span>
             </div>
             <div className="flex items-center gap-2">
               <button
                 type="button"
-                onClick={() => setZoom((z) => Math.max(0.5, +(z - 0.2).toFixed(2)))}
+                onClick={() => handleStepZoom(-0.2)}
                 className="p-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-slate-200 transition-colors"
                 title="Thu nhỏ"
               >
@@ -411,13 +598,13 @@ const ImageCropModal: React.FC<ImageCropModalProps> = ({
                 min="0.5"
                 max="3.0"
                 step="0.05"
-                value={zoom}
-                onChange={(e) => setZoom(parseFloat(e.target.value))}
+                value={uiZoom}
+                onChange={(e) => handleSliderZoom(parseFloat(e.target.value))}
                 className="flex-1 accent-yellow-400 cursor-pointer"
               />
               <button
                 type="button"
-                onClick={() => setZoom((z) => Math.min(3.0, +(z + 0.2).toFixed(2)))}
+                onClick={() => handleStepZoom(0.2)}
                 className="p-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-slate-200 transition-colors"
                 title="Phóng to"
               >
@@ -435,7 +622,7 @@ const ImageCropModal: React.FC<ImageCropModalProps> = ({
                 className="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-slate-200 text-xs font-semibold flex items-center gap-1.5 transition-colors border border-white/10"
               >
                 <RotateCw className="w-3.5 h-3.5 text-yellow-400" />
-                <span>Xoay 90°</span>
+                <span>Xoay {uiRotation !== 0 ? `${uiRotation}°` : '90°'}</span>
               </button>
               <button
                 type="button"
