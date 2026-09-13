@@ -210,12 +210,13 @@ export class AdminController {
         });
       }
 
-      // 1. Fetch all existing contributions
-      const contributions = await prisma.contribution.findMany({
+      // 1. Fetch and backup all existing contributions
+      const existingContributions = await prisma.contribution.findMany({
         orderBy: { createdAt: 'asc' },
       });
 
-      // 2. Clear old pieces for this moon
+      // 2. Clear old contributions and pieces for this moon
+      await prisma.contribution.deleteMany();
       await prisma.moonPiece.deleteMany({
         where: { moonId: moon.id },
       });
@@ -257,18 +258,28 @@ export class AdminController {
         data: newPiecesData,
       });
 
-      // Remap existing contributions to the newly created pieces inside moon
+      // 4. Recreate and rebind all contributions to the new valid pieces
       const validPieces = await prisma.moonPiece.findMany({
         where: { moonId: moon.id, isWithinMoon: true },
         orderBy: { pieceNumber: 'asc' },
-        take: contributions.length,
+        take: existingContributions.length,
       });
 
-      for (let i = 0; i < contributions.length; i++) {
+      for (let i = 0; i < existingContributions.length; i++) {
         if (validPieces[i]) {
-          await prisma.contribution.update({
-            where: { id: contributions[i].id },
-            data: { pieceId: validPieces[i].id },
+          const old = existingContributions[i];
+          await prisma.contribution.create({
+            data: {
+              pieceId: validPieces[i].id,
+              sessionId: old.sessionId,
+              displayName: old.displayName,
+              message: old.message,
+              imageUrl: old.imageUrl,
+              thumbnailUrl: old.thumbnailUrl,
+              status: old.status,
+              moderationNote: old.moderationNote,
+              createdAt: old.createdAt,
+            },
           });
           await prisma.moonPiece.update({
             where: { id: validPieces[i].id },
@@ -285,20 +296,20 @@ export class AdminController {
           totalCols: size,
           totalPieces: size * size,
           activePieces: validCount,
-          completedPieces: contributions.length,
-          status: contributions.length >= validCount ? 'COMPLETED' : 'ACTIVE',
+          completedPieces: existingContributions.length,
+          status: existingContributions.length >= validCount ? 'COMPLETED' : 'ACTIVE',
         },
       });
 
       return res.json({
         success: true,
-        message: `🌕 Đã mở rộng vầng trăng thành công lên lưới ${size}x${size} (${validCount} mảnh tròn). Toàn bộ ${contributions.length} bài nộp trước đó đã được giữ nguyên!`,
+        message: `🌕 Đã cập nhật quy mô vầng trăng sang lưới ${size}x${size} (${validCount} mảnh tròn). Toàn bộ ${existingContributions.length} bài nộp trước đó đã được giữ nguyên vẹn!`,
         data: {
           totalRows: size,
           totalCols: size,
           totalPieces: size * size,
           activePieces: validCount,
-          completedPieces: contributions.length,
+          completedPieces: existingContributions.length,
         },
       });
     } catch (error: any) {

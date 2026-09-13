@@ -194,9 +194,10 @@ async function main() {
 
   console.log(`✨ [Seed] Đã tạo vầng trăng ID: ${moon.id}`);
 
-  // 2. Generate 13x13 grid (169 total, 101 full squares inside moon circle)
-  const center = 6.5;
-  const radius = 6.5;
+  // 2. Generate 13x13 grid (169 total, 121 full squares inside moon circle)
+  const size = 13;
+  const center = (size - 1) / 2;
+  const radius = (size - 1) / 2;
 
   const pieceDataList: Array<{
     moonId: string;
@@ -209,13 +210,9 @@ async function main() {
 
   let pieceNumber = 1;
   let validCount = 0;
-  for (let r = 0; r < 13; r++) {
-    for (let c = 0; c < 13; c++) {
-      const d1 = Math.hypot(r - center, c - center);
-      const d2 = Math.hypot(r - center, c + 1 - center);
-      const d3 = Math.hypot(r + 1 - center, c - center);
-      const d4 = Math.hypot(r + 1 - center, c + 1 - center);
-      const isWithin = d1 <= radius && d2 <= radius && d3 <= radius && d4 <= radius;
+  for (let r = 0; r < size; r++) {
+    for (let c = 0; c < size; c++) {
+      const isWithin = Math.hypot(r - center, c - center) <= radius + 0.1;
       if (isWithin) validCount++;
 
       pieceDataList.push({
@@ -240,22 +237,22 @@ async function main() {
     data: pieceDataList,
   });
 
-  console.log(`✅ [Seed] Đã khởi tạo 13x13 lưới, trong đó có ${validCount} mảnh trăng nguyên vẹn (~100 pieces).`);
+  console.log(`✅ [Seed] Đã khởi tạo 13x13 lưới, trong đó có ${validCount} mảnh trăng tròn.`);
 
   // 3. Generate seed images using Sharp
   console.log('🎨 [Seed] Đang kết xuất ảnh mẫu và gắn vào các mảnh trăng...');
   const insidePieces = await prisma.moonPiece.findMany({
     where: { moonId: moon.id, isWithinMoon: true },
-    take: 80,
+    orderBy: { pieceNumber: 'asc' },
   });
 
   // Pick ~24 diverse pieces to pre-complete
   // Distribute them evenly
-  const step = Math.floor(insidePieces.length / SEED_CONTRIBUTIONS_DATA.length);
+  const step = Math.max(1, Math.floor(insidePieces.length / SEED_CONTRIBUTIONS_DATA.length));
   let completedCount = 0;
 
   for (let i = 0; i < SEED_CONTRIBUTIONS_DATA.length; i++) {
-    const piece = insidePieces[i * step];
+    const piece = insidePieces[i * step] || insidePieces[i];
     if (!piece) continue;
 
     const seedMeta = SEED_CONTRIBUTIONS_DATA[i];
@@ -265,7 +262,7 @@ async function main() {
     const { imageUrl, thumbnailUrl } = await ImageService.saveArtworkFromSvg(svgContent);
 
     // Create contribution
-    const contribution = await prisma.contribution.create({
+    await prisma.contribution.create({
       data: {
         pieceId: piece.id,
         sessionId: `seed-session-${i + 1}`,
@@ -282,7 +279,6 @@ async function main() {
       where: { id: piece.id },
       data: {
         status: 'COMPLETED',
-        contributionId: contribution.id,
       },
     });
 
