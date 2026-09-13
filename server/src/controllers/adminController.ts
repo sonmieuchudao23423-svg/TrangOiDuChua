@@ -221,8 +221,8 @@ export class AdminController {
       });
 
       // 3. Generate new grid
-      const center = size / 2;
-      const radius = size / 2;
+      const center = (size - 1) / 2;
+      const radius = (size - 1) / 2;
       const newPiecesData: Array<{
         moonId: string;
         row: number;
@@ -237,11 +237,7 @@ export class AdminController {
 
       for (let r = 0; r < size; r++) {
         for (let c = 0; c < size; c++) {
-          const d1 = Math.hypot(r - center, c - center);
-          const d2 = Math.hypot(r - center, c + 1 - center);
-          const d3 = Math.hypot(r + 1 - center, c - center);
-          const d4 = Math.hypot(r + 1 - center, c + 1 - center);
-          const isWithin = d1 <= radius && d2 <= radius && d3 <= radius && d4 <= radius;
+          const isWithin = Math.hypot(r - center, c - center) <= radius + 0.1;
 
           if (isWithin) validCount++;
 

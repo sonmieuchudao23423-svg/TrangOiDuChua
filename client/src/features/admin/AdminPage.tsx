@@ -23,6 +23,8 @@ import {
   Grid,
   Archive,
   ArrowRight,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 import JSZip from 'jszip';
 import { api } from '../../services/api';
@@ -61,23 +63,32 @@ export const AdminPage: React.FC = () => {
   const [selectedGridSize, setSelectedGridSize] = useState<number>(15);
   const [isResizing, setIsResizing] = useState(false);
 
-  // Helper to calculate exact circle cells for any grid size
+  // Helper to calculate exact circle cells for any grid size (matching server math)
   const calculateCirclePiecesCount = (size: number): number => {
-    const center = size / 2;
-    const radius = size / 2;
+    const center = (size - 1) / 2;
+    const radius = (size - 1) / 2;
     let count = 0;
     for (let r = 0; r < size; r++) {
       for (let c = 0; c < size; c++) {
-        const d1 = Math.hypot(r - center, c - center);
-        const d2 = Math.hypot(r - center, c + 1 - center);
-        const d3 = Math.hypot(r + 1 - center, c - center);
-        const d4 = Math.hypot(r + 1 - center, c + 1 - center);
-        if (d1 <= radius && d2 <= radius && d3 <= radius && d4 <= radius) {
+        if (Math.hypot(r - center, c - center) <= radius + 0.1) {
           count++;
         }
       }
     }
     return count;
+  };
+
+  const handlePageChange = (newPage: number) => {
+    if (newPage >= 1 && newPage <= totalPages) {
+      setPage(newPage);
+      loadData(statusFilter, newPage);
+    }
+  };
+
+  const handleFilterChange = (newFilter: string) => {
+    setStatusFilter(newFilter);
+    setPage(1);
+    loadData(newFilter, 1);
   };
 
   const handleLogin = (e: React.FormEvent) => {
@@ -856,7 +867,7 @@ export const AdminPage: React.FC = () => {
               ].map((f) => (
                 <button
                   key={f.id}
-                  onClick={() => setStatusFilter(f.id)}
+                  onClick={() => handleFilterChange(f.id)}
                   className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-colors ${
                     statusFilter === f.id
                       ? 'bg-yellow-400 text-night-950 font-bold'
@@ -977,6 +988,54 @@ export const AdminPage: React.FC = () => {
               </tbody>
             </table>
           </div>
+
+          {/* Pagination Controls */}
+          {totalPages > 1 && (
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-4 border-t border-white/10 text-xs">
+              <span className="text-slate-400">
+                Hiển thị trang <strong className="text-yellow-300">{page}</strong> / <strong className="text-white">{totalPages}</strong> (60 mảnh / trang)
+              </span>
+
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => handlePageChange(page - 1)}
+                  disabled={page <= 1}
+                  className="px-3 py-1.5 rounded-xl glass-panel text-slate-300 hover:text-white disabled:opacity-30 disabled:pointer-events-none flex items-center gap-1 font-semibold transition-colors"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                  <span>Trước</span>
+                </button>
+
+                <div className="flex items-center gap-1">
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((pNum) => (
+                    <button
+                      key={pNum}
+                      type="button"
+                      onClick={() => handlePageChange(pNum)}
+                      className={`w-8 h-8 rounded-xl font-bold text-xs transition-all ${
+                        page === pNum
+                          ? 'bg-yellow-400 text-night-950 shadow-md shadow-yellow-400/20 scale-105'
+                          : 'glass-panel text-slate-300 hover:text-white hover:bg-white/10'
+                      }`}
+                    >
+                      {pNum}
+                    </button>
+                  ))}
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => handlePageChange(page + 1)}
+                  disabled={page >= totalPages}
+                  className="px-3 py-1.5 rounded-xl glass-panel text-slate-300 hover:text-white disabled:opacity-30 disabled:pointer-events-none flex items-center gap-1 font-semibold transition-colors"
+                >
+                  <span>Sau</span>
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -1040,12 +1099,12 @@ export const AdminPage: React.FC = () => {
             </span>
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
               {[
-                { size: 13, name: 'Lưới 13x13', pieces: '~101 mảnh' },
-                { size: 15, name: 'Lưới 15x15', pieces: '~137 mảnh' },
-                { size: 17, name: 'Lưới 17x17', pieces: '~181 mảnh' },
-                { size: 19, name: 'Lưới 19x19', pieces: '~233 mảnh' },
-                { size: 21, name: 'Lưới 21x21', pieces: '~289 mảnh' },
-                { size: 25, name: 'Lưới 25x25', pieces: '~400 mảnh' },
+                { size: 13, name: 'Lưới 13x13' },
+                { size: 15, name: 'Lưới 15x15' },
+                { size: 17, name: 'Lưới 17x17' },
+                { size: 19, name: 'Lưới 19x19' },
+                { size: 21, name: 'Lưới 21x21' },
+                { size: 25, name: 'Lưới 25x25' },
               ].map((g) => {
                 const isSelected = selectedGridSize === g.size;
                 const isCurrent = currentGridSize === g.size;
