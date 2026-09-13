@@ -5,7 +5,7 @@ import app from './app';
 import prisma from './db';
 import { PieceLockService } from './services/pieceLockService';
 
-const PORT = parseInt(process.env.PORT || '5001', 10);
+const PORT = parseInt(process.env.PORT || '5002', 10);
 
 async function bootstrap() {
   try {
