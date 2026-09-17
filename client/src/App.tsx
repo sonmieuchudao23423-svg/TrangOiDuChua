@@ -385,7 +385,7 @@ export const App: React.FC = () => {
                     onClick={() => handleNavigate('gallery')}
                     className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl glass-panel text-yellow-300 hover:bg-yellow-400/20 text-xs font-bold transition-all border border-yellow-400/30 shadow-sm"
                   >
-                    <span>Xem toàn bộ các mảnh trăng tại trang Mảnh Trăng</span>
+                    <span>Xem toàn bộ các mảnh tại trang Mảnh Trăng</span>
                     <ArrowRight className="w-3.5 h-3.5" />
                   </button>
                 </div>
