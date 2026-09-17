@@ -1258,7 +1258,7 @@ export const AdminPage: React.FC = () => {
                   <span>Hình ảnh mô phỏng vầng trăng sau khi điều chỉnh ({selectedGridSize}x{selectedGridSize}):</span>
                 </span>
                 <p className="text-[11px] text-slate-400 mt-0.5">
-                  Mô phỏng mặt trăng tròn với {targetPiecesCount} mảnh ghép. Toàn bộ bài nộp hiện tại ({allContributions.length}) sẽ tự động phân bổ vào các ô đầu tiên.
+                  Mô phỏng mặt trăng tròn với {targetPiecesCount} mảnh ghép. Toàn bộ {allContributions.length} bài nộp hiện tại sẽ được tự động phân bổ xáo trộn ngẫu nhiên trên toàn bộ vầng trăng mới và bảo toàn 100% dữ liệu.
                 </p>
               </div>
 
@@ -1293,37 +1293,73 @@ export const AdminPage: React.FC = () => {
                     gridTemplateRows: `repeat(${selectedGridSize}, minmax(0, 1fr))`,
                   }}
                 >
-                  {Array.from({ length: selectedGridSize * selectedGridSize }).map((_, idx) => {
-                    const r = Math.floor(idx / selectedGridSize);
-                    const c = idx % selectedGridSize;
-                    const center = (selectedGridSize - 1) / 2;
-                    const radius = (selectedGridSize - 1) / 2;
+                  {(() => {
+                    const completedPositionsMap = new Map<string, any>();
+                    allContributions.forEach((c) => {
+                      if (c.piece && typeof c.piece.row === 'number' && typeof c.piece.col === 'number') {
+                        completedPositionsMap.set(`${c.piece.row},${c.piece.col}`, c);
+                      }
+                    });
 
-                    const isWithin = Math.hypot(r - center, c - center) <= radius + 0.1;
+                    const oldCenter = (currentGridSize - 1) / 2;
+                    const newCenter = (selectedGridSize - 1) / 2;
+                    const targetRadius = (selectedGridSize - 1) / 2;
 
-                    if (!isWithin) {
-                      return <div key={idx} className="w-full h-full opacity-0 pointer-events-none" />;
-                    }
+                    return Array.from({ length: selectedGridSize * selectedGridSize }).map((_, idx) => {
+                      const r = Math.floor(idx / selectedGridSize);
+                      const c = idx % selectedGridSize;
+                      const distFromNewCenter = Math.hypot(r - newCenter, c - newCenter);
+                      const isWithinTarget = distFromNewCenter <= targetRadius + 0.1;
 
-                    // Check if this piece belongs to existing moon or is a new expansion piece
-                    const currRadius = (currentGridSize - 1) / 2;
-                    const isOldCell = selectedGridSize <= currentGridSize || (
-                      Math.abs(r - center) <= currRadius &&
-                      Math.abs(c - center) <= currRadius
-                    );
+                      if (!isWithinTarget) {
+                        return <div key={idx} className="w-full h-full opacity-0 pointer-events-none" />;
+                      }
 
-                    return (
-                      <div
-                        key={idx}
-                        className={`w-full h-full rounded-[2px] transition-all ${
-                          !isOldCell && addedCount > 0
-                            ? 'bg-emerald-500/80 border border-emerald-300 shadow-[0_0_4px_#10b981]'
-                            : 'bg-slate-700/80 border border-slate-600 hover:border-yellow-400'
-                        }`}
-                        title={`Tọa độ: Hàng ${r}, Cột ${c}`}
-                      />
-                    );
-                  })}
+                      // Map new coordinate to old coordinate relative to center
+                      const dRow = r - newCenter;
+                      const dCol = c - newCenter;
+                      const oldRow = Math.round(oldCenter + dRow);
+                      const oldCol = Math.round(oldCenter + dCol);
+
+                      const isInsideOldGrid =
+                        oldRow >= 0 &&
+                        oldRow < currentGridSize &&
+                        oldCol >= 0 &&
+                        oldCol < currentGridSize &&
+                        Math.hypot(oldRow - oldCenter, oldCol - oldCenter) <= oldCenter + 0.1;
+
+                      let cellType: 'completed' | 'empty' | 'new';
+                      let contributionItem: any = null;
+
+                      if (isInsideOldGrid) {
+                        contributionItem = completedPositionsMap.get(`${oldRow},${oldCol}`);
+                        cellType = contributionItem ? 'completed' : 'empty';
+                      } else {
+                        cellType = addedCount > 0 ? 'new' : 'empty';
+                      }
+
+                      const cellTitle =
+                        cellType === 'completed'
+                          ? `Mảnh #${contributionItem?.piece?.pieceNumber || ''} (Hàng ${oldRow}, Cột ${oldCol}) - Đã nộp: ${contributionItem?.displayName || 'Thành viên'}`
+                          : cellType === 'new'
+                          ? `Mảnh mở rộng mới (+${addedCount}) - Tọa độ: Hàng ${r}, Cột ${c}`
+                          : `Ô trống chưa có bài nộp - Tọa độ: Hàng ${r}, Cột ${c}`;
+
+                      return (
+                        <div
+                          key={idx}
+                          className={`w-full h-full rounded-[2px] transition-all ${
+                            cellType === 'new'
+                              ? 'bg-emerald-500/80 border border-emerald-300 shadow-[0_0_4px_#10b981]'
+                              : cellType === 'completed'
+                              ? 'bg-yellow-400 border border-yellow-300 shadow-[0_0_4px_#facc15]'
+                              : 'bg-slate-700/80 border border-slate-600 hover:border-yellow-400'
+                          }`}
+                          title={cellTitle}
+                        />
+                      );
+                    });
+                  })()}
                 </div>
               </div>
             </div>
